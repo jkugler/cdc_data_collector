@@ -1,0 +1,39 @@
+Can collect from different kinds of sensors.
+	define different sensors as loadable classes
+	must have some kind of unique id
+	class must know how to find its "bus" to retrieve values
+	class can have their own sections in the config file for config data
+
+	Config file has section for sensors. Each sensor lists its type (class used) and ID.
+	A file object will load up all the sensor objects.
+
+Define output files
+	what sensors go in the files?
+	What is the reporting interval
+
+Virtual sensors/averages
+	Adjustments?
+	A sensor that is an average over the reporting interval?
+		An average is 12 samples over an interval (interval can be 1 hour, 15 minutes, 5 minutes, etc)
+
+Differnt intervals, so:
+	All internal, so we use threads?
+	Somewhat external, so we use cron jobs.
+		Doesn't work for average values.
+	Will have to be threaded.
+
+	Different threads for different files...?
+	Each file will have to run a thread to collect not only the main sensors, but also the sensors that have to be averaged.
+		So each file object will spawn two threads: one for the interval collections, and one for average collections.
+		Threads must be queryable without stopping.
+		Threads must be able to shutdown cleanly with very short notice.
+		We want decent resolution, so threads would probably wake up every second and check what they're supposed to do
+			Would also enable quick shutdowns.
+
+	The file object would write the values to the file, so there would be no file contention.
+
+Files and versioning
+	On startup, the file objects will have to check their files to make sure they match the column config they were given.  If not, the current file will have to be renamed, and a new file created.  The files will have backup extension, like logfile.log.1, with the number being *higher* the older the file is.
+
+	Alternative idea: Have two differnt kinds of rows in the data files.  A "HEADER" row and a "DATA" row, allowing you to change column definitions on the fly.  However, this would not be condusive to importing into a spreadsheet.
+
