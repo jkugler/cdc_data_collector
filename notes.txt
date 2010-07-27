@@ -1,0 +1,3 @@
+Configuration command:
+
+./configure --enable-owfs --disable-owhttpd --disable-owftpd --disable-cache --enable-usb --enable-mt --enable-owpython --prefix=/usr/local

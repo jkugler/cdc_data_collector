@@ -37,3 +37,24 @@ Files and versioning
 
 	Alternative idea: Have two differnt kinds of rows in the data files.  A "HEADER" row and a "DATA" row, allowing you to change column definitions on the fly.  However, this would not be condusive to importing into a spreadsheet.
 
+for datasource in datasources: LoopingCall(checkdata, datasource).start(60); then datasource.checkdata would have a thing: self.checkthedata().addCallback(self.done) and self.done would contain:for listener in self.listeners: listener.heyyouigotsomedata(data)
+
+class SerialProtocol(LineReceiver):
+    def __init__(self):
+        self.d = None
+    def check(self):
+        self.sendLine("hey you, you serial port device, this is a wakeup call, gimme data now")
+        self.d = Deferred()
+    def lineReceived(self, line):
+        if self.d:
+            self.d.callback(self.parsedata(line))
+            self.d = None
+    def parsedata(self, line):
+        return line.split()
+
+
+then you would do something like:
+
+def igotthedatanow(data):
+    print data
+sp.check().addCallback(igotthedatanow)
