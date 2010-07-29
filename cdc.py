@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
+import optparse
 import os
 import sys
 
+from configobj import ConfigObj
 import pubsub
 
 import cchrc.common.mod
@@ -23,18 +25,38 @@ class DataFile(object):
         #  Reopen file
         #
 
+    def collect_data(self):
+        pass
+
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
     parser = optparse.OptionParser(usage=usage)
     a = parser.add_option
     a('-t', '--test', action='store_true', dest='test',
-      help='Run CDC in test mode. (Sampling every 15 seconds)')
+      help='Run CDC in test mode. (Sampling every 60 seconds)')
     parser.set_defaults(test=False)
 
-    return parser.parse_args()
+    opts, args = parser.parse_args()
+
+    if not args:
+        parser.error("Must provide an ini file on the command line")
+
+    return opts, args
+
+def get_config(ini_file, test_mode):
+    cfg = ConfigObj(ini_file, list_values=True, file_error=True)
+
+    if test_mode:
+        # Walk the config file and replace all time intervals with
+        # 60 seconds
+        pass
+
+    return cfg
 
 def main():
-    pass
+    opts, args = get_opts()
+
+    cfg = get_config(args[0], opts.test)
 
 if __name__ == '__main__':
     main()
