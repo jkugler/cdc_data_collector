@@ -28,29 +28,6 @@ class DataFile(object):
     def collect_data(self):
         pass
 
-class SensorContainer(object):
-    def __init__(self):
-        self.__sensors = {}
-
-    def put(self, sobject, group, name):
-        if not isinstance(sobject, cchrc.sensors.SensorBase):
-            # InvalidObject - ?
-            raise RuntimeError("'%s' is not a Sensor object" % str(sobject))
-        if (group, name) in self.__sensors:
-            # SensorAlreadyDefined
-            raise RuntimeError("Sensor '%s' is already defined" % str(sobject))
-        self.__sensors[(group, name)] = sobject
-
-    def get(self, group, name):
-        try:
-            return self.__sensors[(group, name)]
-        except KeyError:
-            # SensorNotDefined
-            raise KeyError("No sensor defined for group '%s', name '%s'" % (group, name))
-
-    def __str__(self):
-        return '<SensorContainer: ' + ', '.join(sorted([str(x) for x in self.__sensors.keys()])) + '>'
-
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
     parser = optparse.OptionParser(usage=usage)
@@ -67,6 +44,8 @@ def get_opts():
     return opts, args
 
 def get_config(ini_file, test_mode):
+    # 'test_mode' indicates you are testing reading all the configured sensors
+    # Not to be confused with running the test suite
     cfg = ConfigObj(ini_file, list_values=True, file_error=True)
 
     if test_mode:

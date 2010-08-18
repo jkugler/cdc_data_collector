@@ -4,7 +4,7 @@ import unittest
 
 import cchrc
 
-class TestSensor(cchrc.sensors.SensorBase):
+class MyTestSensor(cchrc.sensors.SensorBase):
     def __init__(self, sensor_id, name, **kwargs):
         self.sensor_id = sensor_id
         self.name = name
@@ -32,12 +32,12 @@ class TestAveragingSensor(unittest.TestCase):
 
     def test_empty_readings(self):
         """Ensure empty averaging sensor returns none"""
-        avs = cchrc.sensors.AveragingSensor(TestSensor('', ''))
+        avs = cchrc.sensors.AveragingSensor(MyTestSensor('', ''))
         self.assertEqual(avs.get_reading(), None)
 
     def test_simple_averaging(self):
         """Ensure interval collection"""
-        avs = cchrc.sensors.AveragingSensor(TestSensor('', ''),
+        avs = cchrc.sensors.AveragingSensor(MyTestSensor('', ''),
                                             1, 5)
         avs.go()
         time.sleep(1)
@@ -47,7 +47,7 @@ class TestAveragingSensor(unittest.TestCase):
 
     def test_odd_interval_averaging(self):
         """Ensure interval collection works even when time_period % num_samples != 0"""
-        avs = cchrc.sensors.AveragingSensor(TestSensor('', ''),
+        avs = cchrc.sensors.AveragingSensor(MyTestSensor('', ''),
                                             1, 3)
         avs.go()
         time.sleep(1)
@@ -59,7 +59,7 @@ class TestOwfsSensor(unittest.TestCase):
     """Test the various OWFS sensor functions and utilities"""
 
     def test_id_conversion(self):
-        """Test conversion of IDs from documentation form to OWFS form"""
+        """Ensure endianess conversion succeeds"""
         from cchrc.sensors import onewire as ow
         self.assertEqual('28.F76AA8020000',
                          ow._get_owfs_id('BF000002A86AF728'))
@@ -78,3 +78,30 @@ class TestUtils(unittest.TestCase):
         stype, params = pst('onewire/a=b;c=d;e=f')
         self.assertTrue(stype =='onewire' and
                         params == {'a': 'b', 'c': 'd', 'e': 'f'})
+
+    def test_sensor_get(self):
+        """Ensure the correct class is retrieved"""
+        self.assertEqual(cchrc.sensors.get('onewire').Sensor,
+                         cchrc.sensors.onewire.Sensor)
+
+
+class TestSensorCollection(unittest.TestCase):
+    """Test operation of the SensorCollection class"""
+
+    def test_adding_sensors(self):
+        """Ensure all added sensors are listed"""
+        sc = cchrc.common.SensorContainer()
+        sc.put(MyTestSensor('X1', 'Y1'), 'Z1', 'Y1')
+        sc.put(MyTestSensor('X2', 'Y2'), 'Z1', 'Y2')
+        self.assertEqual(str(sc), "<SensorContainer: ('Z1', 'Y1'), ('Z1', 'Y2')>")
+
+    def test_adding_invalid_object(self):
+        """Ensure adding an invalid object raises an error"""
+        sc = cchrc.common.SensorContainer()
+        self.assertRaises(RuntimeError, sc.put, list(), 'X1', 'Y1')
+
+    def test_adding_duplicate_sensor(self):
+        """Ensure adding another sensor with a duplicate group/name raises and error"""
+        sc = cchrc.common.SensorContainer()
+        sc.put(MyTestSensor('X1', 'Y1'), 'Z1', 'Y1')
+        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 'Y1')
