@@ -6,9 +6,8 @@ import os
 import sys
 
 from configobj import ConfigObj
-import pubsub
 
-import cchrc.common.mod
+import cchrc
 
 class DataFile(object):
     def __init__(self, sensors, out_path, interval=60*60):
@@ -31,13 +30,26 @@ class DataFile(object):
 
 class SensorContainer(object):
     def __init__(self):
-        pass
+        self.__sensors = {}
 
-    def put_sensor(self, sobject, group, name, mode='SAMPLE'):
-        pass
+    def put(self, sobject, group, name):
+        if not isinstance(sobject, cchrc.sensors.SensorBase):
+            # InvalidObject - ?
+            raise RuntimeError("'%s' is not a Sensor object" % str(sobject))
+        if (group, name) in self.__sensors:
+            # SensorAlreadyDefined
+            raise RuntimeError("Sensor '%s' is already defined" % str(sobject))
+        self.__sensors[(group, name)] = sobject
 
-    def get_sensor(self, group, name, mode='SAMPLE'):
-        pass
+    def get(self, group, name):
+        try:
+            return self.__sensors[(group, name)]
+        except KeyError:
+            # SensorNotDefined
+            raise KeyError("No sensor defined for group '%s', name '%s'" % (group, name))
+
+    def __str__(self):
+        return '<SensorContainer: ' + ', '.join(sorted([str(x) for x in self.__sensors.keys()])) + '>'
 
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
@@ -75,8 +87,8 @@ def main():
         for sensor in sensors:
             name = sensor
             sensor_id = sensors[sensor]
-            sobject = cchrc.sensors.get(stype)(sensor_id, name, **params)
-            sc.put_sensor(sobject, group, name)
+            sobject = cchrc.sensors.get(stype).Sensor(sensor_id, name, **params)
+            sc.put(sobject, group, name)
 
 if __name__ == '__main__':
     main()

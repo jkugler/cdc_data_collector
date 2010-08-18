@@ -39,7 +39,6 @@ class AveragingSensor(threading.Thread):
         self.readings = collections.deque([], num_samples)
         self.end_thread = False
         self.start_time = None
-        #self.check_interval = int(time_period/num_samples)
         self.check_interval = time_period/float(num_samples)
         threading.Thread.__init__(self)
 

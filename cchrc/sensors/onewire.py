@@ -4,9 +4,6 @@ import ow
 
 import cchrc.sensors
 
-initialized_connection_type = None
-connection_initialized = False
-
 def _get_owfs_id(sensor_id):
     """
     Converts ids from the form found on the packaging (BF000002A86AF728)
@@ -21,6 +18,9 @@ def _get_owfs_id(sensor_id):
 
 class Sensor(cchrc.sensors.SensorBase):
     sensor_type = 'ow'
+    initialized_connection_type = None
+    connection_initialized = False
+
     def __init__(self, sensor_id, name, **kwargs):
         self.name = name
 
@@ -31,15 +31,15 @@ class Sensor(cchrc.sensors.SensorBase):
 
         connection_type = kwargs['connection']
 
-        if not connection_initialized:
+        if not Sensor.connection_initialized:
             ow.init(connection_type)
-            connection_initialized = True
-            initialized_connection_type = connection_type
-        elif (connection_initialized and
-              (initialized_connection_type != connection_type)):
+            Sensor.connection_initialized = True
+            Sensor.initialized_connection_type = connection_type
+        elif (Sensor.connection_initialized and
+              (Sensor.initialized_connection_type != connection_type)):
             raise RuntimeError("OneWire Connection already initialized to '%s' "
                                "but an attempt was made to initalize to '%s'" %
-                               (initialized_connection_type, connection_type))
+                               (Sensor.initialized_connection_type, connection_type))
 
     def get_reading(self):
         pass
