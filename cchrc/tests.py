@@ -5,9 +5,9 @@ import unittest
 import cchrc
 
 class MyTestSensor(cchrc.sensors.SensorBase):
-    def __init__(self, sensor_id, name, **kwargs):
+    def __init__(self, name, sensor_id, **kwargs):
+        cchrc.sensors.SensorBase.__init__(self, name)
         self.sensor_id = sensor_id
-        self.name = name
         self.value = 0
 
         if 'increment_value' in kwargs:
@@ -20,12 +20,33 @@ class MyTestSensor(cchrc.sensors.SensorBase):
         return self.value
 
 class TestSensorBase(unittest.TestCase):
-    """Tests the base sensor"""
+    """Tests the base sensor and its functions"""
 
     def test_base_attributes(self):
         """Ensure SensorBase has all needed attributes"""
         self.assertTrue(hasattr(cchrc.sensors.SensorBase, '__init__') and
                         hasattr(cchrc.sensors.SensorBase, 'get_reading'))
+
+    def test_friendly_name_when_not_set(self):
+        """Ensure getting friendly name when not set returns name"""
+        s = MyTestSensor('NAME', 'id')
+        self.assertEqual(s.display_name, 'NAME')
+
+    def test_friendly_name_when_set(self):
+        """Ensure getting friendly name when set returns friendly name"""
+        s = MyTestSensor('NAME', 'id')
+        s.display_name = 'FRIENDLY'
+        self.assertEqual(s.display_name, 'FRIENDLY')
+
+    def test_normal_name(self):
+        """Ensure name can be set and returned"""
+        s = MyTestSensor('NAME', 'id')
+        s.name = 'NAME2'
+        self.assertEqual(s.name, 'NAME2')
+
+    def test_invoking_sensorbase_directly(self):
+        """Ensure SensorBase raises error if invoked directly"""
+        self.assertRaises(NotImplementedError, cchrc.sensors.SensorBase, 'NAME')
 
 class TestAveragingSensor(unittest.TestCase):
     """Tests the averaging sensor"""
@@ -84,16 +105,15 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(cchrc.sensors.get('onewire').Sensor,
                          cchrc.sensors.onewire.Sensor)
 
-
 class TestSensorCollection(unittest.TestCase):
     """Test operation of the SensorCollection class"""
 
     def test_adding_sensors(self):
         """Ensure all added sensors are listed"""
         sc = cchrc.common.SensorContainer()
-        sc.put(MyTestSensor('X1', 'Y1'), 'Z1', 'Y1')
-        sc.put(MyTestSensor('X2', 'Y2'), 'Z1', 'Y2')
-        self.assertEqual(str(sc), "<SensorContainer: ('Z1', 'Y1'), ('Z1', 'Y2')>")
+        sc.put(MyTestSensor('X1', 'Y1'), 'Z1', 'X1')
+        sc.put(MyTestSensor('X2', 'Y2'), 'Z1', 'X2')
+        self.assertEqual(str(sc), "<SensorContainer: ('Z1', 'X1', None), ('Z1', 'X2', None)>")
 
     def test_adding_invalid_object(self):
         """Ensure adding an invalid object raises an error"""
@@ -103,5 +123,61 @@ class TestSensorCollection(unittest.TestCase):
     def test_adding_duplicate_sensor(self):
         """Ensure adding another sensor with a duplicate group/name raises and error"""
         sc = cchrc.common.SensorContainer()
+        sc.put(MyTestSensor('X1', 'Y1'), 'Z1', 'X1')
+        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 'X1')
+
+    def test_getting_back_sensor(self):
+        """Ensure sensor put in SC is retrieved"""
+        sc = cchrc.common.SensorContainer()
+        s = MyTestSensor('X1', 'Y1')
+        sc.put(s, 'Z1', 'X1')
+        self.assertTrue(s is sc.get('Z1', 'X1'))
+
+    def test_retrieving_invalid_sensor(self):
+        """Ensure retrieving an invalid sensor raises an error"""
+        sc = cchrc.common.SensorContainer()
+        self.assertRaises(KeyError, sc.get, 'ZZ', 'YY')
+
+    def test_adding_averaging_sensor_without_corresponding_sample_sensor(self):
+        """Ensure an averaging sensor already has a sampling sensor stored"""
+        sc = cchrc.common.SensorContainer()
+        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 'X1', 900)
+
+    def test_storing_sampling_sensor_as_averaging(self):
+        """Ensure trying to store a Sampling sensor as an averaging sensor raises an error"""
+        sc = cchrc.common.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1', 'Y1')
-        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 'Y1')
+        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 'X1', 900)
+
+class TestFileOperations(unittest.TestCase):
+    """Test operation of DataFile and related"""
+    import cchrc.common.datafile
+
+    def test_split_sensor_info_invalid_mode(self):
+        """Ensure  error is raised on invalid mode"""
+        ssi = cchrc.common.datafile._split_sensor_info
+        self.assertRaises(RuntimeError, ssi, 'NAME', 'GROUP', 'BARF')
+
+    def test_split_sensor_info_name_only(self):
+        """Ensure correctness with a name and default group and mode"""
+        ssi = cchrc.common.datafile._split_sensor_info
+        self.assertEqual(('GROUP', 'NAME', 'SAMPLE'),
+                         ssi('NAME', 'GROUP', 'SAMPLE'))
+
+    def test_split_sensor_info_name_group(self):
+        """Ensure correctness with name and group, and default mode"""
+        ssi = cchrc.common.datafile._split_sensor_info
+        self.assertEqual(('MYGROUP', 'NAME', 'SAMPLE'),
+                         ssi('MYGROUP.NAME', 'GROUP', 'SAMPLE'))
+
+    def test_split_sensor_info_name_group_mode(self):
+        """Ensure correctness with name, group, and mode"""
+        ssi = cchrc.common.datafile._split_sensor_info
+        self.assertEqual(('MYGROUP', 'NAME', 'AVERAGE'),
+                         ssi('MYGROUP.NAME/AVERAGE', 'GROUP', 'SAMPLE'))
+
+    def test_split_sensor_info_name_mode(self):
+        """Ensure correctness with name and mode, and default group"""
+        ssi = cchrc.common.datafile._split_sensor_info
+        self.assertEqual(('GROUP', 'NAME', 'AVERAGE'),
+                         ssi('NAME/AVERAGE', 'GROUP', 'SAMPLE'))

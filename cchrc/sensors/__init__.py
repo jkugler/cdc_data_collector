@@ -15,20 +15,46 @@ class SensorBase(object):
     This will be a base class and will probably never be instantiated directly.
     """
     sensor_type = 'base'
-    def __init__(self, sensor_id, name, **kwargs):
-        raise NotImplemented
+    _display_name = None
+    def __init__(self, name, sensor_id=None, **kwargs):
+        if self.__class__ is SensorBase:
+            raise NotImplementedError
+
+        self.__name = name
+
+    # This is also required to override threading.Thread's name property
+
+    @property
+    def name(self):
+        return self.__name
+
+    @name.setter
+    def name(self, name):
+        self.__name = name
 
     def get_reading(self):
         """
         Sensor-type-specifc read method
         """
-        raise NotImplemented
+        raise NotImplementedError
 
-class AveragingSensor(threading.Thread):
+    @property
+    def display_name(self):
+        if self._display_name:
+            return self._display_name
+        else:
+            return self.__name
+
+    @display_name.setter
+    def display_name(self, value):
+        self._display_name = value
+
+class AveragingSensor(SensorBase, threading.Thread):
     """
     A "sensor" that will average over the given time period and return
     the average when asked for its reading
     """
+
     def __init__(self, sensor, time_period=15*60, num_samples=12):
         """
         sensor is a Sensor object
@@ -40,6 +66,7 @@ class AveragingSensor(threading.Thread):
         self.end_thread = False
         self.start_time = None
         self.check_interval = time_period/float(num_samples)
+        SensorBase.__init__(self, sensor.name + '_avg')
         threading.Thread.__init__(self)
 
     def run(self):

@@ -10,6 +10,7 @@ def _get_owfs_id(sensor_id):
     to the form required by owfs to address the sensors (28.F76AA8020000)
     """
     if '.' in sensor_id:
+        # TODO: InvalidIdForConversion
         raise RuntimeError("Given id '%s' to convert, but id already has a "
                            "'.' in it. Something is wrong")
 
@@ -21,8 +22,8 @@ class Sensor(cchrc.sensors.SensorBase):
     initialized_connection_type = None
     connection_initialized = False
 
-    def __init__(self, sensor_id, name, **kwargs):
-        self.name = name
+    def __init__(self, name, sensor_id, **kwargs):
+        cchrc.sensors.SensorBase.__init__(self, name)
 
         if sensor_id[2] == '.':
             self.sensor_id = sensor_id

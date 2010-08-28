@@ -5,28 +5,7 @@ import optparse
 import os
 import sys
 
-from configobj import ConfigObj
-
 import cchrc
-
-class DataFile(object):
-    def __init__(self, sensors, out_path, interval=60*60):
-        """
-        sensors is a list of Sensor objects
-        out_path is the path to the data file being written
-        internval is the interval to sample and record (in seconds)
-        """
-
-        # Get names of sensors and construct data file header row
-        # Open out_path as CSV Dict
-        # Check to make sure the header matches sensor names
-        # If not, close file, rename using .0, .1, .2 etc
-        #  The *higher* the number, the older the file
-        #  Reopen file
-        #
-
-    def collect_data(self):
-        pass
 
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
@@ -43,22 +22,11 @@ def get_opts():
 
     return opts, args
 
-def get_config(ini_file, test_mode):
-    # 'test_mode' indicates you are testing reading all the configured sensors
-    # Not to be confused with running the test suite
-    cfg = ConfigObj(ini_file, list_values=True, file_error=True)
-
-    if test_mode:
-        for data_file in cfg['Files']:
-            cfg['Files'][data_file]['SamplingTime'] = 60
-
-    return cfg
-
 def main():
     sc = SensorContainer()
     opts, args = get_opts()
 
-    cfg = get_config(args[0], opts.test)
+    cfg = cchrc.common.config.Config(args[0], opts.test)
 
     for group in cfg['SensorGroups']:
         stype, params = cchrc.common.parse_sensor_type(cfg['SensorGroups'][group]['SensorType'])
