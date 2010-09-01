@@ -115,5 +115,3 @@ class DataFile(object):
                      for s in self.sensors])
         data['Timestamp'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.csv.writerow(data)
-
-
