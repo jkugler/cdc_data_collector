@@ -1,4 +1,8 @@
-from cchrc.sensors import AveragingSensor
+import csv
+import os
+import datetime
+
+import cchrc
 
 VALID_MODES = ('SAMPLE', 'AVERAGE')
 
@@ -22,50 +26,94 @@ def _split_sensor_info(s, default_group, default_mode):
 
     return group, s, mode
 
+def _rotate_files(full_path):
+    count = 1
+
+    # First we find out how many data files there are
+    while True:
+        test_path = full_path + '.' + str(count)
+        if not os.path.exists(test_path):
+            break
+        count += 1
+
+    # Then we do the renaming
+    while count > 0:
+        new_path = full_path + '.' + str(count)
+        count -= 1
+        if count == 0:
+            old_path = full_path
+        else:
+            old_path = full_path + '.' + str(count)
+
+        os.rename(old_path, new_path)
+
 class DataFile(object):
-    def __init__(self, file_id, sc, out_file, cfg):
+    def __init__(self, file_id, file_name, base_dir, default_group, sampling_time,
+                 default_mode, sensor_list, sensor_collection):
         """
+        file_id is the name of the file's section in the config file
+        base_dir is the path to which the file will be written
+        default_group is the default group of the sensors
+        sampling_time is the sampling time of the file
+        default_mode is the default mode of the sensors
+        sensor_list is a list of sensor names to be pulled from the SensorCollection
         sensor_collection is a SensorCollection object
-        out_file is
-          - the path to the data file being written
-          - OR a file-like object
-        cfg is the config for the file (a dict from the config ini)
         """
+        self.file_id = file_id
+        self.file_name = file_name
+        self.base_dir = base_dir
+        self.sampling_time = sampling_time
         self.sensors = []
+        AS = cchrc.sensors.AveragingSensor
 
         # Get names of sensors and construct data file header row
-        dg = cfg['DefaultGroup'].upper()
-        dm = cfg['DefaultMode'].upper()
-        st = cfg['Samplingtime']
+        dg = default_group
+        dm = default_mode.upper()
 
-        for s in cfg['Sensors']:
+        for s in sensor_list:
             group, name, mode = _split_sensor_info(s, dg, dm)
             # Sampling sensors should already be in the SC
             # An averaging sensor's sampling sensor should already be in the SC
-            if not sc.contains(group, name):
+            if not sensor_collection.contains(group, name):
                 # TODO: MalformedConfigFile - ?
                 raise RuntimeError("File '%s' is requesting non-existant sensor %s.%s" %
                                    (file_id, group, name))
-            ########## Need to set names/friendly names
             if mode == 'SAMPLE':
-                self.sensors.append(sc.get(group, name))
+                self.sensors.append(sensor_collection.get(group, name))
             elif mode == 'AVERAGE':
-                if sc.contains(group, name, st):
-                    self.sensors.append(sc.get(group, name, st))
+                if sensor_collection.contains(group, name, st):
+                    self.sensors.append(sensor_collection.get(group, name, st))
                 else:
-                    new_sensor = AveragingSensor(sc.get(group, name), st)
-                    sc.put(new_sensor, group, name, st)
+                    new_sensor = AS(sensor_collection.get(group, name), st)
+                    sensor_collection.put(new_sensor, group, name, st)
                     self.sensors.append(new_sensor)
             else:
                 # Should never get here
                 raise("Invalid mode: '%s'" % mode)
 
-        # Open out_path as CSV Dict
-        # Check to make sure the header matches sensor names
-        # If not, close file, rename using .0, .1, .2 etc
-        #  The *higher* the number, the older the file
-        #  Reopen file
-        #
+        self.header = ['Timestamp'] + [s.display_name for s in self.sensors]
+
+        self.open_file()
+
+    def open_file(self):
+        full_path = os.path.join(self.base_dir, self.file_name)
+        if not os.path.exists(self.base_dir):
+            # TODO: BaseDirDoesNotExist
+            raise RuntimeError("Base Directory '%s' does not exist" % self.base_dir)
+
+        if os.path.exists(full_path):
+            test_header = csv.reader(open(full_path)).next()
+            if self.header != test_header:
+                _rotate_files(full_path)
+
+        self.csv = csv.DictWriter(open(full_path, mode='a', buffering=0),
+                                  self.header)
+        self.csv.writer.writerow(self.header)
 
     def collect_data(self):
-        pass
+        data = dict([(s.display_name, s.get_reading())
+                     for s in self.sensors])
+        data['Timestamp'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.csv.writerow(data)
+
+

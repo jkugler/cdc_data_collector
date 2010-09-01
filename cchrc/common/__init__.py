@@ -1,10 +1,13 @@
 import cchrc
+import config
+import datafile
 
 class SensorContainer(object):
     def __init__(self):
         self.__sensors = {}
 
-    def put(self, sobject, group, name, interval=None):
+    def put(self, sobject, group, interval=None):
+        name = sobject.name
         if not isinstance(sobject, cchrc.sensors.SensorBase):
             # TODO: InvalidObject
             raise RuntimeError("'%s' is not a Sensor object" % str(sobject))

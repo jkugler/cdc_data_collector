@@ -23,7 +23,7 @@ def get_opts():
     return opts, args
 
 def main():
-    sc = SensorContainer()
+    sc = cchrc.common.SensorContainer()
     opts, args = get_opts()
 
     cfg = cchrc.common.config.Config(args[0], opts.test)
@@ -35,7 +35,12 @@ def main():
             name = sensor
             sensor_id = sensors[sensor]
             sobject = cchrc.sensors.get(stype).Sensor(sensor_id, name, **params)
+            # TODO: Add display names, if defined
             sc.put(sobject, group, name)
+
+    for data_file in cfg['Files']:
+        pass
+
 
 if __name__ == '__main__':
     main()
