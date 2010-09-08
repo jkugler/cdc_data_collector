@@ -49,13 +49,13 @@ class SensorBase(object):
     def display_name(self, value):
         self._display_name = value
 
-class AveragingSensor(SensorBase, threading.Thread):
+class AveragingSensor(SensorBase):
     """
-    A "sensor" that will average over the given time period and return
-    the average when asked for its reading
+    A "sensor" that will record readings when instructed, and return
+    an average when asked for its reading.
     """
 
-    def __init__(self, sensor, time_period=15*60, num_samples=12):
+    def __init__(self, sensor, num_samples=12):
         """
         sensor is a Sensor object
         time_period is in seconds
@@ -63,19 +63,7 @@ class AveragingSensor(SensorBase, threading.Thread):
         """
         self.sensor = sensor
         self.readings = collections.deque([], num_samples)
-        self.end_thread = False
-        self.start_time = None
-        self.check_interval = time_period/float(num_samples)
         SensorBase.__init__(self, sensor.name + '_avg')
-        threading.Thread.__init__(self)
-
-    def run(self):
-        self.start_time = time.time()
-        while True:
-            if self.end_thread:
-                return
-            self.readings.append(self.sensor.get_reading())
-            time.sleep(self.check_interval - ((time.time() - self.start_time) % self.check_interval))
 
     def get_reading(self):
         """
@@ -85,10 +73,7 @@ class AveragingSensor(SensorBase, threading.Thread):
             return None
 
         readings = list(self.readings)
-        return sum(readings)/len(readings)
+        return sum(readings)/float(len(readings))
 
-    def go(self):
-        self.start()
-
-    def stop(self):
-        self.end_thread = True
+    def collect_reading(self):
+        self.readings.append(self.sensor.get_reading())

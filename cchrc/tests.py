@@ -63,25 +63,15 @@ class TestAveragingSensor(unittest.TestCase):
         avs = cchrc.sensors.AveragingSensor(MyTestSensor('', ''))
         self.assertEqual(avs.get_reading(), None)
 
-    def test_simple_averaging(self):
-        """Ensure interval collection"""
-        avs = cchrc.sensors.AveragingSensor(MyTestSensor('', ''),
-                                            1, 5)
-        avs.go()
-        time.sleep(1)
+    def test_averaging(self):
+        """Ensure returned average is correct"""
+        avs = cchrc.sensors.AveragingSensor(MyTestSensor('', '',
+                                                         increment_value=5), 5)
+        avs.collect_reading()
+        avs.collect_reading()
+        avs.collect_reading()
         value = avs.get_reading()
-        avs.stop()
-        self.assertEqual(value, 4)
-
-    def test_odd_interval_averaging(self):
-        """Ensure interval collection works even when time_period % num_samples != 0"""
-        avs = cchrc.sensors.AveragingSensor(MyTestSensor('', ''),
-                                            1, 3)
-        avs.go()
-        time.sleep(1)
-        value = avs.get_reading()
-        avs.stop()
-        self.assertEqual(value, 3)
+        self.assertEqual(int(value), 10)
 
 class TestOwfsSensor(unittest.TestCase):
     """Test the various OWFS sensor functions and utilities"""
