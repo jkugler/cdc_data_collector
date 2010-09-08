@@ -21,6 +21,7 @@ class SensorBase(object):
             raise NotImplementedError
 
         self.__name = name
+        self.num_samples = None
 
     # This is also required to override threading.Thread's name property
 
@@ -62,6 +63,7 @@ class AveragingSensor(SensorBase):
         samples is the number of samples to take in time_period.
         """
         self.sensor = sensor
+        self.num_samples = num_samples
         self.readings = collections.deque([], num_samples)
         SensorBase.__init__(self, sensor.name + '_avg')
 

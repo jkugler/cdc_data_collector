@@ -1,10 +1,26 @@
 import cchrc
+from collections import defaultdict
 import config
 import datafile
+import threading
+import time
 
-class SensorContainer(object):
+class SensorContainer(threading.Thread):
     def __init__(self):
+        self.__end_thread = False
         self.__sensors = {}
+        self.__sbsi = defaultdict(list) # sensors by sampling interval
+
+    def run(self):
+        while True:
+            if self.__end_thread:
+                return
+            # Check for averaging sensors that need to be "collected"
+            # and spin them off
+            time.sleep(1)
+
+    def start_averaging_sensors(self):
+        self.start()
 
     def put(self, sobject, group, interval=None):
         name = sobject.name
@@ -14,12 +30,6 @@ class SensorContainer(object):
         if self.contains(group, name, interval):
             # TODO: SensorAlreadyDefined
             raise RuntimeError("Sensor in group '%s' with namne '%s' is already defined" % (group, name))
-        if interval and not self.contains(group, name, None):
-            # Averaging sensor needs sampling sensor defined, or something
-            # is wrong.
-            # TODO: OrphanAveragingSensor
-            raise RuntimeError("No sampling sensor for averaging sensor %s.%s"
-                               % (group, name))
         if interval and not isinstance(sobject, cchrc.sensors.AveragingSensor):
             # Trying to store a Sampling sensor as an averaging sensor?
             # Something is broken
@@ -27,6 +37,8 @@ class SensorContainer(object):
             raise RuntimeError("Sensor %s.%s is not an averaging sensor"
                                % (group, name))
         self.__sensors[(group, name, interval)] = sobject
+        if interval:
+            self.__sbsi[interval/sobject.num_samples].append(sobject)
 
     def get(self, group, name, interval=None):
         try:

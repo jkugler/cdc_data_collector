@@ -82,10 +82,11 @@ class DataFile(object):
                 self.sensors.append(sensor_collection.get(group, name))
             elif mode == 'AVERAGE':
                 if sensor_collection.contains(group, name, st):
-                    self.sensors.append(sensor_collection.get(group, name, st))
+                    self.sensors.append(sensor_collection.get(group, name,
+                                                              sampling_time))
                 else:
-                    new_sensor = AS(sensor_collection.get(group, name), st)
-                    sensor_collection.put(new_sensor, group, name, st)
+                    new_sensor = AS(sensor_collection.get(group, name))
+                    sensor_collection.put(new_sensor, group, sampling_time)
                     self.sensors.append(new_sensor)
             else:
                 # Should never get here
