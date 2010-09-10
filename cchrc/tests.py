@@ -12,8 +12,10 @@ def get_file(*a):
     return open(os.path.join(*a)).read()
 
 class MyTestSensor(cchrc.sensors.SensorBase):
+    valid_kwargs = ['increment_value']
+
     def __init__(self, name, sensor_id = None, **kwargs):
-        cchrc.sensors.SensorBase.__init__(self, name)
+        cchrc.sensors.SensorBase.__init__(self, name, **kwargs)
         self.sensor_id = sensor_id
         self.value = 0
 
@@ -28,6 +30,10 @@ class MyTestSensor(cchrc.sensors.SensorBase):
 
 class TestSensorBase(unittest.TestCase):
     """Tests the base sensor and its functions"""
+
+    def test_list_sensor_types(self):
+        """Ensure sensors.list_all() is returning what it should"""
+        self.assertEqual(cchrc.sensors.list_all(), ['onewire'])
 
     def test_base_attributes(self):
         """Ensure SensorBase has all needed attributes"""
@@ -54,6 +60,16 @@ class TestSensorBase(unittest.TestCase):
     def test_invoking_sensorbase_directly(self):
         """Ensure SensorBase raises error if invoked directly"""
         self.assertRaises(NotImplementedError, cchrc.sensors.SensorBase, 'NAME')
+
+    def test_valid_keywords(self):
+        """Ensure sensor accepts valid keywords"""
+        s = MyTestSensor('NAME', 'id', increment_value=5)
+        self.assertEqual(5, s.incr)
+
+    def test_invalid_keywords(self):
+        """Ensure sensor rejects invalid keywords"""
+        self.assertRaises(cchrc.sensors.InvalidSensorArg,
+                          MyTestSensor, 'NAME', 'id', invalid_keyword_arg='some_value')
 
 class TestAveragingSensor(unittest.TestCase):
     """Tests the averaging sensor"""
@@ -102,6 +118,18 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(cchrc.sensors.get('onewire').Sensor,
                          cchrc.sensors.onewire.Sensor)
 
+    def test_mod_list(self):
+        """Ensure cchrc.common.mod.mod_list is working: module dir"""
+        self.assertEqual(cchrc.common.mod.mod_list(os.path.join(os.path.dirname(__file__),
+                                                                'common')),
+                         ['config', 'datafile', 'mod'])
+
+    def test_most_nolist(self):
+        """Ensure cchrc.common.mod.mod_list is working: no module dir"""
+        temp_dir = tempfile.mkdtemp()
+        self.assertEqual(cchrc.common.mod.mod_list(temp_dir), [])
+        shutil.rmtree(temp_dir)
+
 class TestSensorCollection(unittest.TestCase):
     """Test operation of the SensorCollection class"""
 
@@ -149,6 +177,15 @@ class TestSensorCollection(unittest.TestCase):
         sc = cchrc.common.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1')
         self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 900)
+
+    def test_storing_averaging_sensor(self):
+        """Ensure an averaging sensor is stored properly"""
+        sc = cchrc.common.SensorContainer()
+        smp_sensor = MyTestSensor('X1', 'Y1')
+        avg_sensor = cchrc.sensors.AveragingSensor(smp_sensor)
+        sc.put(avg_sensor, 'Z1', interval=900)
+        self.assertTrue(75 in sc._SensorContainer__sbsi and
+                        sc._SensorContainer__sbsi[75][0] is avg_sensor)
 
 class TestFileAuxOperations(unittest.TestCase):
     """Test operation of auxillary DataFile operations"""
@@ -251,3 +288,30 @@ class TestDataFileOperations(unittest.TestCase):
         data = csv_file.next()
 
         self.assertEqual(data[1:], ['2', '10', '40'])
+
+    def test_invalid_sensor(self):
+        """Ensure asking for an invalid sensor raises and error"""
+        self.assertRaises(RuntimeError, self.df, 'TestID', 'TestFile',
+                          self.temp_dir, 'TestGroup', 5, 'SAMPLE',
+                          ["T1","T2","T6"], self.sc)
+
+    def test_use_new_averaging_sensor(self):
+        """Ensure correctness of adding an averaging sensor that is *not* in the SC"""
+        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T1","T2","T5/AVERAGE"], self.sc)
+        self.assertTrue(type(d.sensors[2]) is cchrc.sensors.AveragingSensor)
+
+    def test_use_existing_averaging_sensor(self):
+        """Ensure correctness of adding an averaging sensor that is in the SC"""
+        d1 = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T5/AVERAGE"], self.sc)
+        d2 = self.df('TestID', 'TestFile2', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T5/AVERAGE"], self.sc)
+        self.assertTrue(type(d1.sensors[0]) is cchrc.sensors.AveragingSensor
+                        and d1.sensors[0] is d2.sensors[0])
+
+    def test_use_invalid_dir(self):
+        """Ensure using an invalid directory raises an error"""
+        self.assertRaises(RuntimeError, self.df, 'TestID', 'TestFile',
+                          '/tmp/INVALIDDIRXXXXX', 'TestGroup', 5, 'SAMPLE',
+                          ["T1"], self.sc)

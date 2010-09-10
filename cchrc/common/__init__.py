@@ -10,6 +10,7 @@ class SensorContainer(threading.Thread):
         self.__end_thread = False
         self.__sensors = {}
         self.__sbsi = defaultdict(list) # sensors by sampling interval
+        threading.Thread.__init__(self)
 
     def run(self):
         while True:

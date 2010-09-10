@@ -1,6 +1,7 @@
 import csv
 import os
 import datetime
+import threading
 
 import cchrc
 
@@ -24,7 +25,7 @@ def _split_sensor_info(s, default_group, default_mode):
         # InvalidSensorMode
         raise RuntimeError("Invalid mode '%s'" % mode)
 
-    return group, s, mode
+    return group, s, mode.upper()
 
 def _rotate_files(full_path):
     count = 1
@@ -46,6 +47,29 @@ def _rotate_files(full_path):
             old_path = full_path + '.' + str(count)
 
         os.rename(old_path, new_path)
+
+class DataFileRunner(threading.Thread):
+    def __init__(self):
+        self.__end_thread = False
+        self.__data_files = {}
+        threading.Thread.__init__(self)
+
+    def run(self):
+        while True:
+            if self.__end_thread:
+                return
+            # Check for data files that need to be "collected"
+            # and spin them off
+            time.sleep(1)
+
+    def start_data_files(self):
+        self.start()
+
+    def put(self, data_file_object):
+        pass
+
+    def __str__(self):
+        return '<DataFileRunner: ' + ', '.join(sorted([str(x) for x in self.__data_files.keys()])) + '>'
 
 class DataFile(object):
     def __init__(self, file_id, file_name, base_dir, default_group, sampling_time,
@@ -78,19 +102,17 @@ class DataFile(object):
                 # TODO: MalformedConfigFile - ?
                 raise RuntimeError("File '%s' is requesting non-existant sensor %s.%s" %
                                    (file_id, group, name))
+
             if mode == 'SAMPLE':
                 self.sensors.append(sensor_collection.get(group, name))
             elif mode == 'AVERAGE':
-                if sensor_collection.contains(group, name, st):
+                if sensor_collection.contains(group, name, sampling_time):
                     self.sensors.append(sensor_collection.get(group, name,
                                                               sampling_time))
                 else:
                     new_sensor = AS(sensor_collection.get(group, name))
                     sensor_collection.put(new_sensor, group, sampling_time)
                     self.sensors.append(new_sensor)
-            else:
-                # Should never get here
-                raise("Invalid mode: '%s'" % mode)
 
         self.header = ['Timestamp'] + [s.display_name for s in self.sensors]
 

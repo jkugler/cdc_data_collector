@@ -4,6 +4,9 @@ import time
 
 import cchrc.common.mod
 
+class InvalidSensorArg(Exception):
+    pass
+
 def list_all():
     return cchrc.common.mod.mod_list(__path__[0])
 
@@ -20,8 +23,11 @@ class SensorBase(object):
         if self.__class__ is SensorBase:
             raise NotImplementedError
 
+        for key in kwargs.keys():
+            if key not in self.valid_kwargs:
+                raise InvalidSensorArg("Arg '%s' is invalid for sensor type '%s'"
+                                       % (key, type(self)))
         self.__name = name
-        self.num_samples = None
 
     # This is also required to override threading.Thread's name property
 
@@ -33,7 +39,7 @@ class SensorBase(object):
     def name(self, name):
         self.__name = name
 
-    def get_reading(self):
+    def get_reading(self): # pragma: no cover
         """
         Sensor-type-specifc read method
         """
@@ -62,10 +68,11 @@ class AveragingSensor(SensorBase):
         time_period is in seconds
         samples is the number of samples to take in time_period.
         """
+        SensorBase.__init__(self, sensor.name)
         self.sensor = sensor
         self.num_samples = num_samples
         self.readings = collections.deque([], num_samples)
-        SensorBase.__init__(self, sensor.name + '_avg')
+        self.display_name = sensor.name + '_avg'
 
     def get_reading(self):
         """
