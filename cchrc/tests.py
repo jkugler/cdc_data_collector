@@ -6,6 +6,7 @@ import time
 import unittest
 
 import cchrc
+from cchrc.common.exceptions import *
 
 def get_file(*a):
     """Convenience function to return the contents of a file"""
@@ -101,7 +102,8 @@ class TestOwfsSensor(unittest.TestCase):
     def test_id_conversion_fail(self):
         """Ensure _get_owfs_id blows up when given an already-converted id"""
         from cchrc.sensors import onewire as ow
-        self.assertRaises(RuntimeError, ow._get_owfs_id, '28.F76AA8020000')
+        self.assertRaises(ow.OwfsIdAlreadyConverted,
+                          ow._get_owfs_id, '28.F76AA8020000')
 
 class TestUtils(unittest.TestCase):
     """Test various utilities"""
@@ -122,7 +124,7 @@ class TestUtils(unittest.TestCase):
         """Ensure cchrc.common.mod.mod_list is working: module dir"""
         self.assertEqual(cchrc.common.mod.mod_list(os.path.join(os.path.dirname(__file__),
                                                                 'common')),
-                         ['config', 'datafile', 'mod'])
+                         ['config', 'datafile', 'exceptions', 'mod'])
 
     def test_most_nolist(self):
         """Ensure cchrc.common.mod.mod_list is working: no module dir"""
@@ -147,13 +149,13 @@ class TestSensorCollection(unittest.TestCase):
         obj = TO()
         obj.name = 'Some Value'
         sc = cchrc.common.SensorContainer()
-        self.assertRaises(RuntimeError, sc.put, obj, 'X1')
+        self.assertRaises(InvalidObject, sc.put, obj, 'X1')
 
     def test_adding_duplicate_sensor(self):
         """Ensure adding another sensor with a duplicate group/name raises and error"""
         sc = cchrc.common.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1')
-        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1')
+        self.assertRaises(SensorAlreadyDefined, sc.put, MyTestSensor('X1', 'Y1'), 'Z1')
 
     def test_getting_back_sensor(self):
         """Ensure sensor put in SC is retrieved"""
@@ -165,18 +167,13 @@ class TestSensorCollection(unittest.TestCase):
     def test_retrieving_invalid_sensor(self):
         """Ensure retrieving an invalid sensor raises an error"""
         sc = cchrc.common.SensorContainer()
-        self.assertRaises(KeyError, sc.get, 'ZZ', 'YY')
-
-    def test_adding_averaging_sensor_without_corresponding_sample_sensor(self):
-        """Ensure an averaging sensor already has a sampling sensor stored"""
-        sc = cchrc.common.SensorContainer()
-        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 900)
+        self.assertRaises(SensorNotDefined, sc.get, 'ZZ', 'YY')
 
     def test_storing_sampling_sensor_as_averaging(self):
         """Ensure trying to store a Sampling sensor as an averaging sensor raises an error"""
         sc = cchrc.common.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1')
-        self.assertRaises(RuntimeError, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 900)
+        self.assertRaises(NotAnAveragingSensor, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 900)
 
     def test_storing_averaging_sensor(self):
         """Ensure an averaging sensor is stored properly"""
@@ -187,6 +184,14 @@ class TestSensorCollection(unittest.TestCase):
         self.assertTrue(75 in sc._SensorContainer__sbsi and
                         sc._SensorContainer__sbsi[75][0] is avg_sensor)
 
+    def test_starting_stopping_sensor_collection(self):
+        """Ensure SensorCollection thread starts and stops correctly"""
+        sc = cchrc.common.SensorContainer()
+        sc.start_averaging_sensors()
+        is_alive = sc.isAlive()
+        sc.stop_averaging_sensors()
+        self.assertTrue(is_alive)
+
 class TestFileAuxOperations(unittest.TestCase):
     """Test operation of auxillary DataFile operations"""
     import cchrc.common.datafile
@@ -194,7 +199,7 @@ class TestFileAuxOperations(unittest.TestCase):
     def test_split_sensor_info_invalid_mode(self):
         """Ensure error is raised on invalid mode"""
         ssi = cchrc.common.datafile._split_sensor_info
-        self.assertRaises(RuntimeError, ssi, 'NAME', 'GROUP', 'BARF')
+        self.assertRaises(InvalidSensorMode, ssi, 'NAME', 'GROUP', 'BARF')
 
     def test_split_sensor_info_name_only(self):
         """Ensure correctness with a name and default group and mode"""
@@ -237,6 +242,48 @@ class TestFileAuxOperations(unittest.TestCase):
 
         self.assertTrue(all([ope(path + '.' + str(x)) for x in [1,2,3]]))
         shutil.rmtree(temp_dir)
+
+class TestDataFileRunner(unittest.TestCase):
+    def __init__(self, *a, **kw):
+        self.df = cchrc.common.datafile.DataFile
+        unittest.TestCase.__init__(self, *a, **kw)
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.sc = cchrc.common.SensorContainer()
+        self.dfr = cchrc.common.datafile.DataFileRunner()
+        self.sc.put(MyTestSensor('T1'), 'TestGroup')
+        self.sc.put(MyTestSensor('T2', increment_value=5), 'TestGroup')
+        self.sc.put(MyTestSensor('T3', increment_value=10), 'TestGroup')
+        self.sc.put(MyTestSensor('T4', increment_value=15), 'TestGroup')
+        s = MyTestSensor('T5', increment_value=20)
+        s.display_name = 'T5 Display'
+        self.sc.put(s, 'TestGroup')
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_adding_datafile(self):
+        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T1","T2","T5"], self.sc)
+        self.dfr.put(d)
+        self.assertTrue(len(self.dfr._DataFileRunner__data_files[5]) == 1)
+
+    def test_adding_invalid_datafile_object(self):
+        d = object()
+        self.assertRaises(InvalidObject, self.dfr.put, d)
+
+    def test_adding_duplicate_datafile_object(self):
+        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T1","T2","T5"], self.sc)
+        self.dfr.put(d)
+        self.assertRaises(DuplicateObject, self.dfr.put, d)
+
+    def test_starting_stopping_datafile_runner(self):
+        self.dfr.start_data_files()
+        is_alive = self.dfr.isAlive()
+        self.dfr.stop_data_files()
+        self.assertTrue(is_alive)
 
 class TestDataFileOperations(unittest.TestCase):
     def __init__(self, *a, **kw):
@@ -291,7 +338,7 @@ class TestDataFileOperations(unittest.TestCase):
 
     def test_invalid_sensor(self):
         """Ensure asking for an invalid sensor raises and error"""
-        self.assertRaises(RuntimeError, self.df, 'TestID', 'TestFile',
+        self.assertRaises(MalformedConfigFile, self.df, 'TestID', 'TestFile',
                           self.temp_dir, 'TestGroup', 5, 'SAMPLE',
                           ["T1","T2","T6"], self.sc)
 
@@ -312,6 +359,6 @@ class TestDataFileOperations(unittest.TestCase):
 
     def test_use_invalid_dir(self):
         """Ensure using an invalid directory raises an error"""
-        self.assertRaises(RuntimeError, self.df, 'TestID', 'TestFile',
+        self.assertRaises(BaseDirDoesNotExist, self.df, 'TestID', 'TestFile',
                           '/tmp/INVALIDDIRXXXXX', 'TestGroup', 5, 'SAMPLE',
                           ["T1"], self.sc)

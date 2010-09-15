@@ -4,6 +4,12 @@ import ow
 
 import cchrc.sensors
 
+class OwfsConnectionAlreadyInitialized(Exception):
+    pass
+
+class OwfsIdAlreadyConverted(Exception):
+    pass
+
 def _get_owfs_id(sensor_id):
     """
     Converts ids from the form found on the packaging (BF000002A86AF728)
@@ -11,7 +17,7 @@ def _get_owfs_id(sensor_id):
     """
     if '.' in sensor_id:
         # TODO: InvalidIdForConversion
-        raise RuntimeError("Given id '%s' to convert, but id already has a "
+        raise OwfsIdAlreadyConverted("Given id '%s' to convert, but id already has a "
                            "'.' in it. Something is wrong")
 
     return ''.join([sensor_id[-2:], '.'] +
@@ -38,9 +44,9 @@ class Sensor(cchrc.sensors.SensorBase):
             Sensor.initialized_connection_type = connection_type
         elif (Sensor.connection_initialized and
               (Sensor.initialized_connection_type != connection_type)):
-            raise RuntimeError("OneWire Connection already initialized to '%s' "
-                               "but an attempt was made to initalize to '%s'" %
-                               (Sensor.initialized_connection_type, connection_type))
+            raise OwfsConnectionAlreadyInitialized("OneWire Connection already initialized to '%s' "
+                                                   "but an attempt was made to initalize to '%s'" %
+                                                   (Sensor.initialized_connection_type, connection_type))
 
     def get_reading(self):
         pass

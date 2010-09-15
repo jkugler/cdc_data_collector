@@ -1,9 +1,14 @@
+from collections import defaultdict
 import csv
-import os
 import datetime
+import os
 import threading
+import time
 
 import cchrc
+from cchrc.common.exceptions import (InvalidSensorMode, InvalidObject,
+                                     DuplicateObject, BaseDirDoesNotExist,
+                                     MalformedConfigFile)
 
 VALID_MODES = ('SAMPLE', 'AVERAGE')
 
@@ -22,8 +27,7 @@ def _split_sensor_info(s, default_group, default_mode):
         mode = default_mode
 
     if mode not in VALID_MODES:
-        # InvalidSensorMode
-        raise RuntimeError("Invalid mode '%s'" % mode)
+        raise InvalidSensorMode("Invalid mode '%s' in sensor '%s'" % (mode, s))
 
     return group, s, mode.upper()
 
@@ -51,25 +55,33 @@ def _rotate_files(full_path):
 class DataFileRunner(threading.Thread):
     def __init__(self):
         self.__end_thread = False
-        self.__data_files = {}
+        self.__data_files = defaultdict(list)
         threading.Thread.__init__(self)
 
     def run(self):
         while True:
             if self.__end_thread:
-                return
-            # Check for data files that need to be "collected"
-            # and spin them off
+                return # pragma: no cover
+            cur_time = int(time.time())
+            for rt in self.__data_files:
+                if cur_time % rt == 0:
+                    # spin off contents of self.__data_files[rt]
+                    pass
             time.sleep(1)
 
     def start_data_files(self):
         self.start()
 
-    def put(self, data_file_object):
-        pass
+    def stop_data_files(self):
+        self.__end_thread = True
 
-    def __str__(self):
-        return '<DataFileRunner: ' + ', '.join(sorted([str(x) for x in self.__data_files.keys()])) + '>'
+    def put(self, df_object):
+        if not isinstance(df_object, DataFile):
+            raise InvalidObject("'%s' is not a DataFile object" % str(df_object))
+        if df_object in self.__data_files[df_object.sampling_time]:
+            raise DuplicateObject("DataFile '%s' is already in the DataFileRunner"
+                               % os.path.join(df_object.base_dir, df_object.file_name))
+        self.__data_files[df_object.sampling_time].append(df_object)
 
 class DataFile(object):
     def __init__(self, file_id, file_name, base_dir, default_group, sampling_time,
@@ -99,8 +111,7 @@ class DataFile(object):
             # Sampling sensors should already be in the SC
             # An averaging sensor's sampling sensor should already be in the SC
             if not sensor_collection.contains(group, name):
-                # TODO: MalformedConfigFile - ?
-                raise RuntimeError("File '%s' is requesting non-existant sensor %s.%s" %
+                raise MalformedConfigFile("File '%s' is requesting non-existant sensor %s.%s" %
                                    (file_id, group, name))
 
             if mode == 'SAMPLE':
@@ -121,8 +132,7 @@ class DataFile(object):
     def open_file(self):
         full_path = os.path.join(self.base_dir, self.file_name)
         if not os.path.exists(self.base_dir):
-            # TODO: BaseDirDoesNotExist
-            raise RuntimeError("Base Directory '%s' does not exist" % self.base_dir)
+            raise BaseDirDoesNotExist("Base Directory '%s' does not exist" % self.base_dir)
 
         if os.path.exists(full_path):
             test_header = csv.reader(open(full_path)).next()
@@ -133,8 +143,12 @@ class DataFile(object):
                                   self.header)
         self.csv.writer.writerow(self.header)
 
-    def collect_data(self):
+    def collect_data(self, ts=None):
         data = dict([(s.display_name, s.get_reading())
                      for s in self.sensors])
-        data['Timestamp'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if ts:
+            cur_time = datetime.datetime.fromtimestamp(ts)
+        else:
+            cur_time = datetime.datetime.now()
+        data['Timestamp'] = cur_time.strftime('%Y-%m-%d %H:%M:%S')
         self.csv.writerow(data)
