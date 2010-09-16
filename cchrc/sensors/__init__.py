@@ -29,8 +29,6 @@ class SensorBase(object):
                                        % (key, type(self)))
         self.__name = name
 
-    # This is also required to override threading.Thread's name property
-
     @property
     def name(self):
         return self.__name

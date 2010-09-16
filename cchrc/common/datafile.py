@@ -65,8 +65,9 @@ class DataFileRunner(threading.Thread):
             cur_time = int(time.time())
             for rt in self.__data_files:
                 if cur_time % rt == 0:
-                    # spin off contents of self.__data_files[rt]
-                    pass
+                    # TODO: Make this use futures
+                    for df in self.__data_files[rt]:
+                        df.collect_data(cur_time)
             time.sleep(1)
 
     def start_data_files(self):

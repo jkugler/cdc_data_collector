@@ -7,6 +7,14 @@ import sys
 
 import cchrc
 
+def listify(v):
+    """
+    If v is a string, returns a list with a single element of v
+    """
+    if isinstance(v, basestring):
+        v = [v]
+    return v
+
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
     parser = optparse.OptionParser(usage=usage)
@@ -23,7 +31,9 @@ def get_opts():
     return opts, args
 
 def main():
+    DF = cchrc.common.datafile.DataFile
     sc = cchrc.common.SensorContainer()
+    dfr = cchrc.common.datafile.DataFileRunner()
     opts, args = get_opts()
 
     cfg = cchrc.common.config.Config(args[0], opts.test)
@@ -35,12 +45,15 @@ def main():
             name = sensor
             sensor_id = sensors[sensor]
             sobject = cchrc.sensors.get(stype).Sensor(sensor_id, name, **params)
-            # TODO: Add display names, if defined
+            if group + '.' + name in cfg['Names']:
+                sobject.display_name = cfg['Names'][group + '.' + name]
             sc.put(sobject, group, name)
 
     for data_file in cfg['Files']:
-        pass
-
+        fcfg = cfg['Files'][data_file]
+        dfr.put(DF(data_file, fcfg['FileName'], cfg['Main']['BaseDirectory'],
+                   fcfg['DefaultGroup'], fcfg['SamplingTime'],
+                   fcfg['DefaultMode'], listify(fcfg['Sensors']), sc))
 
 if __name__ == '__main__':
     main()

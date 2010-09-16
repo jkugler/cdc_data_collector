@@ -24,7 +24,9 @@ class SensorContainer(threading.Thread):
             elapsed_time = int(time.time()) - self.__start_time
             for st in self.__sbsi:
                 if elapsed_time % st == 0:
-                    # spin off contents of self.__sbsi[st]
+                    # TODO: Make this use futures
+                    for sensor in self.__sbsi[st]:
+                        sensor.collect_reading()
                     pass
 
             time.sleep(1)
