@@ -3,31 +3,12 @@ import os
 import shutil
 import tempfile
 import time
-import unittest
+import unittest2 as unittest
 
 import cchrc
 from cchrc.common.exceptions import *
 
-def get_file(*a):
-    """Convenience function to return the contents of a file"""
-    return open(os.path.join(*a)).read()
-
-class MyTestSensor(cchrc.sensors.SensorBase):
-    valid_kwargs = ['increment_value']
-
-    def __init__(self, name, sensor_id = None, **kwargs):
-        cchrc.sensors.SensorBase.__init__(self, name, **kwargs)
-        self.sensor_id = sensor_id
-        self.value = 0
-
-        if 'increment_value' in kwargs:
-            self.incr = kwargs['increment_value']
-        else:
-            self.incr = 1
-
-    def get_reading(self):
-        self.value += self.incr
-        return self.value
+from common import get_file, MyTestSensor
 
 class TestSensorBase(unittest.TestCase):
     """Tests the base sensor and its functions"""
@@ -122,11 +103,12 @@ class TestUtils(unittest.TestCase):
 
     def test_mod_list(self):
         """Ensure cchrc.common.mod.mod_list is working: module dir"""
-        self.assertEqual(cchrc.common.mod.mod_list(os.path.join(os.path.dirname(__file__),
+        opd = os.path.dirname
+        self.assertEqual(cchrc.common.mod.mod_list(os.path.join(opd(opd(__file__)),
                                                                 'common')),
                          ['config', 'datafile', 'exceptions', 'mod'])
 
-    def test_most_nolist(self):
+    def test_mod_nolist(self):
         """Ensure cchrc.common.mod.mod_list is working: no module dir"""
         temp_dir = tempfile.mkdtemp()
         self.assertEqual(cchrc.common.mod.mod_list(temp_dir), [])
@@ -245,7 +227,7 @@ class TestFileAuxOperations(unittest.TestCase):
 
 class TestDataFileRunner(unittest.TestCase):
     def __init__(self, *a, **kw):
-        self.df = cchrc.common.datafile.DataFile
+        self.DF = cchrc.common.datafile.DataFile
         unittest.TestCase.__init__(self, *a, **kw)
 
     def setUp(self):
@@ -264,7 +246,7 @@ class TestDataFileRunner(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
 
     def test_adding_datafile(self):
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         self.dfr.put(d)
         self.assertTrue(len(self.dfr._DataFileRunner__data_files[5]) == 1)
@@ -274,7 +256,7 @@ class TestDataFileRunner(unittest.TestCase):
         self.assertRaises(InvalidObject, self.dfr.put, d)
 
     def test_adding_duplicate_datafile_object(self):
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         self.dfr.put(d)
         self.assertRaises(DuplicateObject, self.dfr.put, d)
@@ -287,7 +269,7 @@ class TestDataFileRunner(unittest.TestCase):
 
 class TestDataFileOperations(unittest.TestCase):
     def __init__(self, *a, **kw):
-        self.df = cchrc.common.datafile.DataFile
+        self.DF = cchrc.common.datafile.DataFile
         unittest.TestCase.__init__(self, *a, **kw)
 
     def setUp(self):
@@ -306,17 +288,17 @@ class TestDataFileOperations(unittest.TestCase):
 
     def test_file_creation(self):
         """Ensure file is created and has correct headers"""
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         self.assertEqual('Timestamp,T1,T2,T5 Display\r\n',
                          get_file(self.temp_dir, 'TestFile'))
 
     def test_file_rotation(self):
         """Ensure files are rotated if the headers do not match"""
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         d = None
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T3","T4","T5"], self.sc)
         d = None
         self.assertTrue(os.path.exists(os.path.join(self.temp_dir, 'TestFile'))
@@ -324,7 +306,7 @@ class TestDataFileOperations(unittest.TestCase):
 
     def test_collect_data(self):
         """Ensure data is collected and recorded"""
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         d.collect_data()
         d.collect_data()
@@ -338,27 +320,27 @@ class TestDataFileOperations(unittest.TestCase):
 
     def test_invalid_sensor(self):
         """Ensure asking for an invalid sensor raises and error"""
-        self.assertRaises(MalformedConfigFile, self.df, 'TestID', 'TestFile',
+        self.assertRaises(MalformedConfigFile, self.DF, 'TestID', 'TestFile',
                           self.temp_dir, 'TestGroup', 5, 'SAMPLE',
                           ["T1","T2","T6"], self.sc)
 
     def test_use_new_averaging_sensor(self):
         """Ensure correctness of adding an averaging sensor that is *not* in the SC"""
-        d = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5/AVERAGE"], self.sc)
         self.assertTrue(type(d.sensors[2]) is cchrc.sensors.AveragingSensor)
 
     def test_use_existing_averaging_sensor(self):
         """Ensure correctness of adding an averaging sensor that is in the SC"""
-        d1 = self.df('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+        d1 = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T5/AVERAGE"], self.sc)
-        d2 = self.df('TestID', 'TestFile2', self.temp_dir, 'TestGroup',
+        d2 = self.DF('TestID', 'TestFile2', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T5/AVERAGE"], self.sc)
         self.assertTrue(type(d1.sensors[0]) is cchrc.sensors.AveragingSensor
                         and d1.sensors[0] is d2.sensors[0])
 
     def test_use_invalid_dir(self):
         """Ensure using an invalid directory raises an error"""
-        self.assertRaises(BaseDirDoesNotExist, self.df, 'TestID', 'TestFile',
+        self.assertRaises(BaseDirDoesNotExist, self.DF, 'TestID', 'TestFile',
                           '/tmp/INVALIDDIRXXXXX', 'TestGroup', 5, 'SAMPLE',
                           ["T1"], self.sc)

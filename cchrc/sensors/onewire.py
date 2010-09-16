@@ -23,13 +23,14 @@ def _get_owfs_id(sensor_id):
     return ''.join([sensor_id[-2:], '.'] +
                    [sensor_id[x*2:x*2+2] for x in xrange(6,0,-1)])
 
-class Sensor(cchrc.sensors.SensorBase):
+class Sensor(cchrc.sensors.SensorBase): # pragma: no cover
     sensor_type = 'ow'
     initialized_connection_type = None
     connection_initialized = False
+    valid_kwargs = ['connection']
 
     def __init__(self, name, sensor_id, **kwargs):
-        cchrc.sensors.SensorBase.__init__(self, name)
+        cchrc.sensors.SensorBase.__init__(self, name, **kwargs)
 
         if sensor_id[2] == '.':
             self.sensor_id = sensor_id
