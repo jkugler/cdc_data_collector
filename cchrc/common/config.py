@@ -23,7 +23,7 @@ class Config(object):
                 self.__cfg = configobj.ConfigObj(config_file, file_error=True)
                 if test_mode:
                     for data_file in self.__cfg['Files']:
-                        cfg['Files'][data_file]['SamplingTime'] = 60
+                        data_file['SamplingTime'] = 60
         elif not hasattr(self,'_Config__cfg'):
             # TODO: ConfigurationNotInitialized
             raise RuntimeError("Configuration not initialized")
