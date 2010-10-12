@@ -30,7 +30,7 @@ class Sensor(cchrc.sensors.SensorBase): # pragma: no cover
     sensor_type = 'ow'
     initialized_connection_type = None
     sensors = {}
-    valid_kwargs = ['connection', 'sn', 'use_cache']
+    valid_kwargs = ['connection', 'sa', 'use_cache']
 
     @classmethod
     def _get_all(klass, sensor, sensors):
