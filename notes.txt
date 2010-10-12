@@ -10,3 +10,8 @@ python-dev
 
 Requires:
 libusb-0.1-4, libfuse2, python2.6, libpython2.6
+
+Python requires:
+unittest2
+configobj (debian)
+OW (obviously)
