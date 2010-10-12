@@ -26,7 +26,7 @@ def _get_owfs_id(sensor_id):
     return ''.join([sensor_id[-2:], '.'] +
                    [sensor_id[x*2:x*2+2] for x in xrange(6,0,-1)])
 
-class Sensor(cchrc.sensors.SensorBase): # pragma: no cover
+class Sensor(cchrc.sensors.SensorBase):
     sensor_type = 'ow'
     initialized_connection_type = None
     sensors = {}

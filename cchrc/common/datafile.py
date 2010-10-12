@@ -140,6 +140,8 @@ class DataFile(object):
             if self.header != test_header:
                 _rotate_files(full_path)
 
+        # TODO: Don't write header if it already exists
+        # AND TEST THAT IT DOESN'T
         self.csv = csv.DictWriter(open(full_path, mode='a', buffering=0),
                                   self.header)
         self.csv.writer.writerow(self.header)
