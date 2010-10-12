@@ -53,7 +53,7 @@ def main():
     dfr = cchrc.common.datafile.DataFileRunner()
     opts, args = get_opts()
 
-    cfg = cchrc.common.config.Config(args[0], opts.test)
+    cfg = cchrc.common.config.Config(args[0])
 
     for group in cfg['SensorGroups']:
         stype, group_params = cchrc.common.parse_sensor_info(cfg['SensorGroups'][group]['SensorType'])
@@ -71,8 +71,12 @@ def main():
 
     for data_file in cfg['Files']:
         fcfg = cfg['Files'][data_file]
+        if opts.test:
+            sampling_time = 60
+        else:
+            sample_time = int(fcfg['SamplingTime'])
         dfr.put(DF(data_file, fcfg['FileName'], cfg['Main']['BaseDirectory'],
-                   fcfg['DefaultGroup'], fcfg['SamplingTime'],
+                   fcfg['DefaultGroup'], sample_time,
                    fcfg['DefaultMode'], listify(fcfg['Sensors']), sc))
 
     mom = Mother([sc.start_averaging_sensors, dfr.start_data_files],

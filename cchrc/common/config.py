@@ -10,9 +10,7 @@ class Config(object):
     the same configuration data without having to provide a path.
     """
     __shared_state = {}
-    def __init__(self, config_file=None, test_mode=False):
-        # 'test_mode' indicates you are testing reading all the configured sensors
-        # Not to be confused with running the test suite
+    def __init__(self, config_file=None):
         self.__dict__ = self.__shared_state
 
         if config_file:
@@ -21,9 +19,6 @@ class Config(object):
                 raise RuntimeError("Configuration Already Initialized")
             else:
                 self.__cfg = configobj.ConfigObj(config_file, file_error=True)
-                if test_mode:
-                    for data_file in self.__cfg['Files']:
-                        data_file['SamplingTime'] = 60
         elif not hasattr(self,'_Config__cfg'):
             # TODO: ConfigurationNotInitialized
             raise RuntimeError("Configuration not initialized")
