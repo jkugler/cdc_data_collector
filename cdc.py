@@ -56,15 +56,25 @@ def main():
     cfg = cchrc.common.config.Config(args[0])
 
     for group in cfg['SensorGroups']:
-        stype, group_params = cchrc.common.parse_sensor_info(cfg['SensorGroups'][group]['SensorType'])
+        if '/' in cfg['SensorGroups'][group]['SensorType']:
+            stype, group_params = cchrc.common.parse_sensor_info(cfg['SensorGroups'][group]['SensorType'])
+        else:
+            stype = cfg['SensorGroups'][group]['SensorType']
+            group_params = {}
+
         sensors = cfg['SensorGroups'][group]['Sensors']
         for sensor in sensors:
             name = sensor
-            sensor_id, sensor_params = cchrc.common.parse_sensor_info(sensors[sensor])
-            params = {}
-            params.update(group_params)
-            params.update(sensor_params)
-            sobject = cchrc.sensors.get(stype).Sensor(sensor_id, name, **params)
+            if '/' in sensors[sensor]:
+                sensor_id, sensor_params = cchrc.common.parse_sensor_info(sensors[sensor])
+            else:
+                sensor_id = sensors[sensor]
+                sensor_params = {}
+
+            all_params = {}
+            all_params.update(group_params)
+            all_params.update(sensor_params)
+            sobject = cchrc.sensors.get(stype).Sensor(sensor_id, name, **all_params)
             if group + '.' + name in cfg['Names']:
                 sobject.display_name = cfg['Names'][group + '.' + name]
             sc.put(sobject, group, name)
