@@ -82,7 +82,7 @@ class Sensor(cchrc.sensors.SensorBase): # pragma: no cover
     def get_reading(self):
         self.lock.acquire()
         if (time.time() - self.last_sample_time) > 2:
-            self.last_sample_value = getattr(self.sensor, self.sensor_attribute)
+            self.last_sample_value = float(getattr(self.sensor, self.sensor_attribute))
             self.last_sample_time = time.time()
 
         self.lock.release()
