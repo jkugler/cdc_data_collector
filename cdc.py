@@ -87,7 +87,7 @@ def main():
         else:
             sample_time = int(fcfg['SamplingTime'])
         dfr.put(DF(data_file, fcfg['FileName'], cfg['Main']['BaseDirectory'],
-                   fcfg['DefaultGroup'], sample_time,
+                   fcfg['DefaultGroup'], sampling_time,
                    fcfg['DefaultMode'], listify(fcfg['Sensors']), sc))
 
     mom = Mother([sc.start_averaging_sensors, dfr.start_data_files],
