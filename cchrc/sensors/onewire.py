@@ -73,7 +73,8 @@ class Sensor(cchrc.sensors.SensorBase): # pragma: no cover
                                                    "but an attempt was made to initalize to '%s'" %
                                                    (Sensor.initialized_connection_type, connection_type))
 
-        self.sensor = ow.Sensor(self.sensors[sensor_id])
+        # TODO: This can generage a KeyError. Need to catch it
+        self.sensor = ow.Sensor(self.sensors[self.sensor_id])
         self.sensor.useCache(use_cache)
 
     def get_reading(self):

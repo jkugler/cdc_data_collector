@@ -74,6 +74,7 @@ def main():
             all_params = {}
             all_params.update(group_params)
             all_params.update(sensor_params)
+            # TODO: This can throw a KeyError...catch it.
             sobject = cchrc.sensors.get(stype).Sensor(name, sensor_id, **all_params)
             if group + '.' + name in cfg['Names']:
                 sobject.display_name = cfg['Names'][group + '.' + name]
