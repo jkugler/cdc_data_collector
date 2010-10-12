@@ -78,7 +78,7 @@ def main():
             sobject = cchrc.sensors.get(stype).Sensor(name, sensor_id, **all_params)
             if group + '.' + name in cfg['Names']:
                 sobject.display_name = cfg['Names'][group + '.' + name]
-            sc.put(sobject, group, name)
+            sc.put(sobject, group)
 
     for data_file in cfg['Files']:
         fcfg = cfg['Files'][data_file]
