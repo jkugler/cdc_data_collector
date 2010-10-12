@@ -63,6 +63,8 @@ class Sensor(cchrc.sensors.SensorBase): # pragma: no cover
             x = int(x)
         if x != 'False' and bool(x):
             use_cache = True
+        else:
+            use_cache = False
 
         if not ow.initialized:
             self._initialize_ow(connection_type)
