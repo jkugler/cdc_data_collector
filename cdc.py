@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
 from collections import defaultdict
+import signal
 import optparse
 import os
 import sys
+import time
 
 import cchrc
 
@@ -30,6 +32,21 @@ def get_opts():
 
     return opts, args
 
+class Mother(object):
+    def __init__(self, start_callables, stop_callables):
+        self.start_callables = start_callables
+        self.stop_callables = stop_callables
+        self.ended = False
+
+    def start(self):
+        for c in self.start_callables:
+            c()
+
+    def stop(self, sig, stack_frame):
+        for c in self.stop_callables:
+            c()
+        self.ended = True
+
 def main():
     DF = cchrc.common.datafile.DataFile
     sc = cchrc.common.SensorContainer()
@@ -39,11 +56,14 @@ def main():
     cfg = cchrc.common.config.Config(args[0], opts.test)
 
     for group in cfg['SensorGroups']:
-        stype, params = cchrc.common.parse_sensor_type(cfg['SensorGroups'][group]['SensorType'])
+        stype, group_params = cchrc.common.parse_sensor_info(cfg['SensorGroups'][group]['SensorType'])
         sensors = cfg['SensorGroups'][group]['Sensors']
         for sensor in sensors:
             name = sensor
-            sensor_id = sensors[sensor]
+            sensor_id, sensor_params = cchrc.common.parse_sensor_info(sensors[sensor])
+            params = {}
+            params.update(group_params)
+            params.update(sensor_params)
             sobject = cchrc.sensors.get(stype).Sensor(sensor_id, name, **params)
             if group + '.' + name in cfg['Names']:
                 sobject.display_name = cfg['Names'][group + '.' + name]
@@ -54,6 +74,21 @@ def main():
         dfr.put(DF(data_file, fcfg['FileName'], cfg['Main']['BaseDirectory'],
                    fcfg['DefaultGroup'], fcfg['SamplingTime'],
                    fcfg['DefaultMode'], listify(fcfg['Sensors']), sc))
+
+    mom = Mother([sc.start_averaging_sensors, dfr.start_data_files],
+                 [sc.stop_averaging_sensors, dfr.stop_data_files])
+
+    mom.start()
+
+    signal.signal(signal.SIGTERM, mom.stop)
+    signal.signal(signal.SIGINT, mom.stop)
+
+    while True:
+        # Putting a 'while True' loop here for "future expansion," such as
+        # printing out system stats on a SIGUSR1 or some such
+        signal.pause()
+        if mom.ended:
+            return
 
 if __name__ == '__main__':
     main()

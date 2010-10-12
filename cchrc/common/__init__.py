@@ -64,9 +64,9 @@ class SensorContainer(threading.Thread):
     def stop_averaging_sensors(self):
         self.__end_thread = True
 
-def parse_sensor_type(type_string):
-    stype, params_string = type_string.split('/')
+def parse_sensor_info(info_string):
+    major_param, minor_params_string = info_string.split('/')
 
-    params = dict([x.split('=') for x in params_string.split(';')])
+    minor_params = dict([x.split('=') for x in minor_params_string.split(';')])
 
-    return stype, params
+    return major_param, minor_params

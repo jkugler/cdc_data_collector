@@ -89,12 +89,12 @@ class TestOwfsSensor(unittest.TestCase):
 class TestUtils(unittest.TestCase):
     """Test various utilities"""
 
-    def test_parse_sensor_type(self):
-        """Ensure the sensor type string is parsed correctly"""
-        pst = cchrc.common.parse_sensor_type
-        stype, params = pst('onewire/a=b;c=d;e=f')
-        self.assertTrue(stype =='onewire' and
-                        params == {'a': 'b', 'c': 'd', 'e': 'f'})
+    def test_parse_sensor_info(self):
+        """Ensure the sensor info string is parsed correctly"""
+        psi = cchrc.common.parse_sensor_info
+        major_param, minor_params = psi('major/a=b;c=d;e=f')
+        self.assertTrue(major_param =='major' and
+                        minor_params == {'a': 'b', 'c': 'd', 'e': 'f'})
 
     def test_sensor_get(self):
         """Ensure the correct class is retrieved"""

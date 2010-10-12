@@ -1,3 +1,12 @@
 Configuration command:
 
-./configure --enable-owfs --disable-owhttpd --disable-owftpd --disable-cache --enable-usb --enable-mt --enable-owpython --prefix=/usr/local
+./configure --enable-owfs --disable-owhttpd --disable-owftpd --enable-cache --enable-usb --enable-mt --enable-owpython --disable-owperl --disable-owtcl --disable-owphp --prefix=/usr
+
+Build-requires:
+libusb-dev (which installs the build chain as well)
+libfuse-dev
+swig
+python-dev
+
+Requires:
+libusb-0.1-4, libfuse2, python2.6, libpython2.6

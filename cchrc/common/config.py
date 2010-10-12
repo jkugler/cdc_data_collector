@@ -20,8 +20,7 @@ class Config(object):
                 # TODO: ConfigurationAlreadyInitialized
                 raise RuntimeError("Configuration Already Initialized")
             else:
-                self.__cfg = configobj.ConfigObj(config_file, file_error=True,
-                                                 list_values=True)
+                self.__cfg = configobj.ConfigObj(config_file, file_error=True)
                 if test_mode:
                     for data_file in self.__cfg['Files']:
                         cfg['Files'][data_file]['SamplingTime'] = 60
