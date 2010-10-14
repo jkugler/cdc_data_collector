@@ -54,7 +54,7 @@ def configure_logging(cfg, opts):
             os.makedirs(log_dir)
         log_args['filename'] = os.path.join(log_dir, 'cdc.log')
 
-    if opts.verbosity != 0:
+    if opts.verbose != 0:
         log_level = max([logging.WARNING - 10 * opts.verbosity, logging.DEBUG])
     else:
         cfg_log_level = cfg['Main'].get('LogLevel', 'warning').lower()
