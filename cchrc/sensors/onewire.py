@@ -56,6 +56,8 @@ class Sensor(cchrc.sensors.SensorBase):
             self.sensor_id = _get_owfs_id(sensor_id)
 
         connection_type = kwargs['connection']
+        # TODO: Check that this attribute actually exists on the sensor
+        # being initialized.
         self.sensor_attribute = kwargs.get('sa', 'temperature')
 
         x = kwargs.get('use_cache', 'False')
