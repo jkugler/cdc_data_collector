@@ -19,7 +19,6 @@ def _get_owfs_id(sensor_id):
     to the form required by owfs to address the sensors (28.F76AA8020000)
     """
     if '.' in sensor_id:
-        # TODO: InvalidIdForConversion
         raise OwfsIdAlreadyConverted("Given id '%s' to convert, but id already has a "
                            "'.' in it. Something is wrong")
 
