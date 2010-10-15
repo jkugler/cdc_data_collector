@@ -15,3 +15,8 @@ Python requires:
 unittest2
 configobj (debian)
 OW (obviously)
+
+TODO: Need a "null sensor" for sensors that fail to be found.
+TODO: Need OWSensor to return a "N/A" value when a sensor can't be read
+TODO: Need averaging sensor to be able to handle storing text values (N/A, NaN, etc)
+TODO: Make sure there are no assumptions in the pipeline of values being numbers

@@ -123,6 +123,8 @@ def main():
             all_params.update(group_params)
             all_params.update(sensor_params)
             # TODO: This can throw a KeyError...catch it.
+            # TODO: Create an exception a sensor module can throw upon
+            # failure to initialize a sensor, and catch it here.
             log.debug("Configuring sensor '%s' with id '%s' and params '%s'",
                       name, sensor_id, str(all_params))
             sobject = cchrc.sensors.get(stype).Sensor(name, sensor_id, **all_params)
