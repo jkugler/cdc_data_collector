@@ -71,6 +71,19 @@ class TestAveragingSensor(unittest.TestCase):
         value = avs.get_reading()
         self.assertEqual(int(value), 10)
 
+class TestNullSensor(unittest.TestCase):
+    """Tests the NullSensor"""
+
+    def test_default_reading(self):
+        """Ensure NullSensor returns None"""
+        ns = cchrc.sensors.NullSensor('foo', 'bar')
+        self.assertTrue(ns.get_reading() is None)
+
+    def test_non_default_reading(self):
+        """Ensure NullSensor returns the value given at initialization"""
+        ns = cchrc.sensors.NullSensor('foo', 'bar', value='TESTVALUE')
+        self.assertEqual(ns.get_reading(), 'TESTVALUE')
+
 class TestOwfsSensor(unittest.TestCase):
     """Test the various OWFS sensor functions and utilities"""
 
