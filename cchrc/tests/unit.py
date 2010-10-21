@@ -127,6 +127,18 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(cchrc.common.mod.mod_list(temp_dir), [])
         shutil.rmtree(temp_dir)
 
+    def test_my_sum_all_good(self):
+        """Ensure my_sum arrives at the correct sum with all good values"""
+        self.assertEqual(cchrc.sensors._my_sum([1,2,3,4,5]), 15)
+
+    def test_my_sum_some_bad(self):
+        """Ensure my_sum ignores None and NaN values"""
+        self.assertEqual(cchrc.sensors._my_sum([1,2,3,4,5, None, float('nan')]), 15)
+
+    def test_my_sum_all_bad(self):
+        """Ensure my_sum returns a sane value for no values"""
+        self.assertEqual(cchrc.sensors._my_sum([None, float('nan')]), 0)
+
 class TestSensorCollection(unittest.TestCase):
     """Test operation of the SensorCollection class"""
 
@@ -259,22 +271,26 @@ class TestDataFileRunner(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
 
     def test_adding_datafile(self):
+        """Ensure adding data file to DFR"""
         d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         self.dfr.put(d)
         self.assertTrue(len(self.dfr._DataFileRunner__data_files[5]) == 1)
 
     def test_adding_invalid_datafile_object(self):
+        """Ensure adding an invalid object to the DFR fails"""
         d = object()
         self.assertRaises(InvalidObject, self.dfr.put, d)
 
     def test_adding_duplicate_datafile_object(self):
+        """Ensure adding a duplicate file to the DFR fails"""
         d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         self.dfr.put(d)
         self.assertRaises(DuplicateObject, self.dfr.put, d)
 
     def test_starting_stopping_datafile_runner(self):
+        """Ensure starting and stopping the DFR works"""
         self.dfr.start_data_files()
         is_alive = self.dfr.isAlive()
         self.dfr.stop_data_files()
@@ -301,6 +317,16 @@ class TestDataFileOperations(unittest.TestCase):
 
     def test_file_creation(self):
         """Ensure file is created and has correct headers"""
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T1","T2","T5"], self.sc)
+        self.assertEqual('Timestamp,T1,T2,T5 Display\r\n',
+                         get_file(self.temp_dir, 'TestFile'))
+
+    def test_header_supression(self):
+        """Ensure file is not given a second set of headers if it already exists"""
+        d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
+                    5, 'SAMPLE', ["T1","T2","T5"], self.sc)
+        d = None
         d = self.DF('TestID', 'TestFile', self.temp_dir, 'TestGroup',
                     5, 'SAMPLE', ["T1","T2","T5"], self.sc)
         self.assertEqual('Timestamp,T1,T2,T5 Display\r\n',

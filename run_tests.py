@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 import os
 import sys
 import unittest2 as unittest
@@ -11,6 +12,9 @@ sys.path.insert(0, opd(os.path.abspath(__file__)))
 from cchrc.tests import (unit, integration)
 
 test_mods = [unit]
+
+#Produce no output
+logging.basicConfig(level=100)
 
 if __name__ == '__main__':
     if '--both' in sys.argv:

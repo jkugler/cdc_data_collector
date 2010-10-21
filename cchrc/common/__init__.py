@@ -2,6 +2,7 @@ import cchrc
 from collections import defaultdict
 import config
 import datafile
+import logging
 import threading
 import time
 
@@ -14,6 +15,7 @@ class SensorContainer(threading.Thread):
         self.__sensors = {}
         self.__sbsi = defaultdict(list) # sensors by sampling interval
         self.__start_time = None
+        self.log = logging.getLogger('cchrc.common.SensorContainer')
         threading.Thread.__init__(self)
 
     def run(self):
@@ -24,6 +26,7 @@ class SensorContainer(threading.Thread):
             elapsed_time = int(time.time()) - self.__start_time
             for st in self.__sbsi:
                 if elapsed_time % st == 0:
+                    self.log.debug("Running '%s' files" % st)
                     # TODO: Make this use futures
                     for sensor in self.__sbsi[st]:
                         sensor.collect_reading()
@@ -32,6 +35,7 @@ class SensorContainer(threading.Thread):
             time.sleep(1)
 
     def start_averaging_sensors(self):
+        self.log.info('Starting')
         self.start()
 
     def put(self, sobject, group, interval=None):
@@ -45,6 +49,7 @@ class SensorContainer(threading.Thread):
             # Something is broken
             raise NotAnAveragingSensor("Sensor %s.%s is not an averaging sensor"
                                % (group, name))
+        self.log.info("Adding %s, %s with interval %s" % (group, name, interval))
         self.__sensors[(group, name, interval)] = sobject
         if interval:
             self.__sbsi[interval/sobject.num_samples].append(sobject)
@@ -62,6 +67,7 @@ class SensorContainer(threading.Thread):
         return '<SensorContainer: ' + ', '.join(sorted([str(x) for x in self.__sensors.keys()])) + '>'
 
     def stop_averaging_sensors(self):
+        self.log.info('Stopping')
         self.__end_thread = True
 
 def parse_sensor_info(info_string):

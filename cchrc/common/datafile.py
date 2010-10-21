@@ -1,6 +1,7 @@
 from collections import defaultdict
 import csv
 import datetime
+import logging
 import os
 import threading
 import time
@@ -54,6 +55,7 @@ def _rotate_files(full_path):
 
 class DataFileRunner(threading.Thread):
     def __init__(self):
+        self.log = logging.getLogger('cchrc.common.datafile.DataFileRunner')
         self.__end_thread = False
         self.__data_files = defaultdict(list)
         threading.Thread.__init__(self)
@@ -65,15 +67,18 @@ class DataFileRunner(threading.Thread):
             cur_time = int(time.time())
             for rt in self.__data_files:
                 if cur_time % rt == 0:
+                    self.log.debug("Running '%s' files" % rt)
                     # TODO: Make this use futures
                     for df in self.__data_files[rt]:
                         df.collect_data(cur_time)
             time.sleep(1)
 
     def start_data_files(self):
+        self.log.info('Starting')
         self.start()
 
     def stop_data_files(self):
+        self.log.info('Ending')
         self.__end_thread = True
 
     def put(self, df_object):
@@ -82,6 +87,8 @@ class DataFileRunner(threading.Thread):
         if df_object in self.__data_files[df_object.sampling_time]:
             raise DuplicateObject("DataFile '%s' is already in the DataFileRunner"
                                % os.path.join(df_object.base_dir, df_object.file_name))
+        self.log.info("Adding '%s' to group '%s'" % (df_object.file_id,
+                                                     df_object.sampling_time))
         self.__data_files[df_object.sampling_time].append(df_object)
 
 class DataFile(object):
@@ -101,12 +108,14 @@ class DataFile(object):
         self.base_dir = base_dir
         self.sampling_time = sampling_time
         self.sensors = []
+        self.log = logging.getLogger('cchrc.common.datafile.DataFile')
         AS = cchrc.sensors.AveragingSensor
 
         # Get names of sensors and construct data file header row
         dg = default_group
         dm = default_mode.upper()
 
+        self.log.info("Configuring data file '%s'" % self.file_id)
         for s in sensor_list:
             group, name, mode = _split_sensor_info(s, dg, dm)
             # Sampling sensors should already be in the SC
@@ -115,6 +124,8 @@ class DataFile(object):
                 raise MalformedConfigFile("File '%s' is requesting non-existant sensor %s.%s" %
                                    (file_id, group, name))
 
+            self.log.debug("Adding '%s.%s/%s' to '%s'" % (group, name, mode,
+                                                          self.file_id))
             if mode == 'SAMPLE':
                 self.sensors.append(sensor_collection.get(group, name))
             elif mode == 'AVERAGE':
@@ -131,22 +142,28 @@ class DataFile(object):
         self.open_file()
 
     def open_file(self):
+        file_exists = False
         full_path = os.path.join(self.base_dir, self.file_name)
+        self.log.info("Opening '%s' for '%s'" %(full_path, self.file_id))
         if not os.path.exists(self.base_dir):
             raise BaseDirDoesNotExist("Base Directory '%s' does not exist" % self.base_dir)
 
         if os.path.exists(full_path):
-            test_header = csv.reader(open(full_path)).next()
+            file_exists = True
+            tf = open(full_path)
+            test_header = csv.reader(tf).next()
+            tf.close()
             if self.header != test_header:
                 _rotate_files(full_path)
 
-        # TODO: Don't write header if it already exists
-        # AND TEST THAT IT DOESN'T
         self.csv = csv.DictWriter(open(full_path, mode='a', buffering=0),
                                   self.header)
-        self.csv.writer.writerow(self.header)
+        if not file_exists:
+            # Only need a header row if it's a new file
+            self.csv.writer.writerow(self.header)
 
     def collect_data(self, ts=None):
+        self.log.debug("Collecting data for '%s'" % self.file_id)
         data = dict([(s.display_name, s.get_reading())
                      for s in self.sensors])
         if ts:
@@ -155,3 +172,4 @@ class DataFile(object):
             cur_time = datetime.datetime.now()
         data['Timestamp'] = cur_time.strftime('%Y-%m-%d %H:%M:%S')
         self.csv.writerow(data)
+        self.log.debug("Done collecting data for '%s'" % self.file_id)

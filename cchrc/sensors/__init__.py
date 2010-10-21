@@ -1,4 +1,6 @@
 import collections
+import logging
+import math
 import threading
 import time
 
@@ -13,9 +15,18 @@ def list_all():
 def get(name):
     return cchrc.common.mod.get(__name__, name)
 
+def _my_sum(values):
+    # Yes, I know I could do this in-line, but it is more
+    # easily testable this way.
+    return sum([x for x in values if (x is not None and not math.isnan(x))])
+
 class SensorBase(object):
     """
     This will be a base class and will probably never be instantiated directly.
+    TODO: Add something to the API that will store an "internal name" that
+    can be extracted for log messages and the like, because sensor.name
+    could be non-unique across sensor groups. Maybe store the sensor's group
+    in the sensor data.
     """
     sensor_type = 'base'
     _display_name = None
@@ -76,6 +87,7 @@ class AveragingSensor(SensorBase):
         self.num_samples = num_samples
         self.readings = collections.deque([], num_samples)
         self.display_name = sensor.name + '_avg'
+        self.log = logging.getLogger('cchrc.sensors.AveragingSensor')
 
     def get_reading(self):
         """
@@ -85,9 +97,10 @@ class AveragingSensor(SensorBase):
             return None
 
         readings = list(self.readings)
-        return sum(readings)/float(len(readings))
+        return _my_sum(readings)/float(len(readings))
 
     def collect_reading(self):
+        self.log.debug("Getting reading for sensor '%s'" % self.sensor.name)
         self.readings.append(self.sensor.get_reading())
 
 class NullSensor(SensorBase):

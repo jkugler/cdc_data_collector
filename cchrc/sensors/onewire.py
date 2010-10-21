@@ -1,4 +1,5 @@
 # OW Sensor
+import logging
 import os
 import threading
 import time
@@ -48,7 +49,9 @@ class Sensor(cchrc.sensors.SensorBase):
         self.last_sample_time = 0
         self.last_sample_value = None
         self.lock = threading.Lock()
+        self.log = logging.getLogger('cchrc.sensors.onewire.Sensor')
 
+        self.original_sensor_id = sensor_id
         if sensor_id[2] == '.':
             self.sensor_id = sensor_id
         else:
@@ -68,6 +71,7 @@ class Sensor(cchrc.sensors.SensorBase):
             use_cache = False
 
         if not ow.initialized:
+            self.log.debug("Initializing OW connection")
             self._initialize_ow(connection_type)
             Sensor.initialized_connection_type = connection_type
         elif (ow.initialized and
@@ -77,13 +81,24 @@ class Sensor(cchrc.sensors.SensorBase):
                                                    (Sensor.initialized_connection_type, connection_type))
 
         # TODO: This can generage a KeyError. Need to catch it
+        self.log.info("Initializing OW sensor '%s'" % self.original_sensor_id)
         self.sensor = ow.Sensor(self.sensors[self.sensor_id])
         self.sensor.useCache(use_cache)
 
     def get_reading(self):
         self.lock.acquire()
+        self.log.debug("Getting reading for '%s'" % self.sensor_id)
         if (time.time() - self.last_sample_time) > 2:
-            self.last_sample_value = float(getattr(self.sensor, self.sensor_attribute))
+            try:
+                self.last_sample_value = float(getattr(self.sensor, self.sensor_attribute))
+            except ow.exUnknownSensor, ex:
+                self.log.critical("Error getting reading from sensor '%s': '%s'" %
+                                  self.original_sensor_id, str(ex))
+                self.last_sample_value = None
+            except Exception, ex:
+                self.log.critical("Unhandlded exception getting reading from sensor '%s': '%s'" %
+                                  self.original_sensor_id, str(ex))
+
             self.last_sample_time = time.time()
 
         self.lock.release()
