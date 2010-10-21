@@ -81,12 +81,12 @@ class Mother(object):
 
     def start(self):
         for c in self.start_callables:
-            self.log.debug("Mother.start starting '%s'", str(c))
+            self.log.debug("Starting '%s'", str(c))
             c()
 
     def stop(self, sig, stack_frame):
         for c in self.stop_callables:
-            self.log.debug("Mother.start stopping '%s'", str(c))
+            self.log.debug("Stopping '%s'", str(c))
             c()
         self.ended = True
 
@@ -152,6 +152,11 @@ def main():
                  [sc.stop_averaging_sensors, dfr.stop_data_files])
 
     log.debug("Starting Mother")
+
+    # TODO: Handle case for logging/threading/closed files, etc.
+    #File "/usr/lib/python2.6/logging/__init__.py", line 789, in emit
+    #stream.write(fs % msg)
+
     mom.start()
 
     signal.signal(signal.SIGTERM, mom.stop)
