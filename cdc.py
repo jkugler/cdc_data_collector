@@ -154,8 +154,9 @@ def main():
     log.debug("Starting Mother")
 
     # TODO: Handle case for logging/threading/closed files, etc.
-    #File "/usr/lib/python2.6/logging/__init__.py", line 789, in emit
-    #stream.write(fs % msg)
+    # File "/usr/lib/python2.6/logging/__init__.py", line 789, in emit
+    # stream.write(fs % msg)
+    # ValueError: I/O operation on closed file
 
     mom.start()
 
@@ -173,4 +174,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    logging.shutdown()
