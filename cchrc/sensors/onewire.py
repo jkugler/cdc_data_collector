@@ -60,6 +60,15 @@ class Sensor(cchrc.sensors.SensorBase):
         connection_type = kwargs['connection']
         # TODO: Check that this attribute actually exists on the sensor
         # being initialized.
+        # entryList(self)
+        # List of the sensor's attributes.
+        #
+        # Example:
+        #
+        # >>> Sensor("/10.B7B64D000800").entryList( )
+        # ['address', 'crc8', 'die', 'family', 'id', 'power',
+        # 'present', 'temperature', 'temphigh', 'templow',
+        # 'trim', 'trimblanket', 'trimvalid', 'type']
         self.sensor_attribute = kwargs.get('sa', 'temperature')
 
         x = kwargs.get('use_cache', 'False')
@@ -93,7 +102,7 @@ class Sensor(cchrc.sensors.SensorBase):
                 self.last_sample_value = float(getattr(self.sensor, self.sensor_attribute))
             except ow.exUnknownSensor, ex:
                 self.log.critical("Error getting reading from sensor '%s': '%s'" %
-                                  self.original_sensor_id, str(ex))
+                                  (self.original_sensor_id, str(ex)))
                 self.last_sample_value = None
             except Exception, ex:
                 self.log.critical("Unhandlded exception getting reading from sensor '%s': '%s'" %
