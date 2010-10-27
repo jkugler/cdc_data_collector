@@ -164,6 +164,7 @@ class DataFile(object):
 
     def collect_data(self, ts=None):
         self.log.debug("Collecting data for '%s'" % self.file_id)
+        # TODO: Convert 'None' to N/A.
         data = dict([(s.display_name, s.get_reading())
                      for s in self.sensors])
         if ts:

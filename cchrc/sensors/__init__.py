@@ -26,7 +26,8 @@ class SensorBase(object):
     TODO: Add something to the API that will store an "internal name" that
     can be extracted for log messages and the like, because sensor.name
     could be non-unique across sensor groups. Maybe store the sensor's group
-    in the sensor data.
+    in the sensor data.  Yeah...storing the sensor's group in the sensor would
+    probably be the best idea.
     """
     sensor_type = 'base'
     _display_name = None
