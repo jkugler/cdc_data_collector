@@ -6,7 +6,7 @@ import time
 
 import ow
 
-import cchrc.sensors
+import cchrc
 
 class OwfsConnectionAlreadyInitialized(Exception):
     pass
@@ -14,17 +14,17 @@ class OwfsConnectionAlreadyInitialized(Exception):
 class OwfsIdAlreadyConverted(Exception):
     pass
 
-def _get_owfs_id(sensor_id):
+def _normalize_owfs_id(sensor_id):
     """
     Converts ids from the form found on the packaging (BF000002A86AF728)
     to the form required by owfs to address the sensors (28.F76AA8020000)
+    If already converted, simply returns the sensor_id
     """
     if '.' in sensor_id:
-        raise OwfsIdAlreadyConverted("Given id '%s' to convert, but id already has a "
-                           "'.' in it. Something is wrong")
-
-    return ''.join([sensor_id[-2:], '.'] +
-                   [sensor_id[x*2:x*2+2] for x in xrange(6,0,-1)])
+        return sensor_id
+    else:
+        return ''.join([sensor_id[-2:], '.'] +
+                       [sensor_id[x*2:x*2+2] for x in xrange(6,0,-1)])
 
 class Sensor(cchrc.sensors.SensorBase):
     sensor_type = 'ow'
@@ -41,6 +41,7 @@ class Sensor(cchrc.sensors.SensorBase):
     @classmethod
     def _initialize_ow(klass, connection_type):
         ow.init(connection_type)
+        klass.initialized_connection_type = connection_type
         klass._get_all(ow.Sensor('/'), klass.sensors)
 
     def __init__(self, name, sensor_id, **kwargs):
@@ -52,10 +53,7 @@ class Sensor(cchrc.sensors.SensorBase):
         self.log = logging.getLogger('cchrc.sensors.onewire.Sensor')
 
         self.original_sensor_id = sensor_id
-        if sensor_id[2] == '.':
-            self.sensor_id = sensor_id
-        else:
-            self.sensor_id = _get_owfs_id(sensor_id)
+        self.sensor_id = _normalize_owfs_id(sensor_id)
 
         connection_type = kwargs['connection']
         # TODO: Check that this attribute actually exists on the sensor
@@ -71,18 +69,11 @@ class Sensor(cchrc.sensors.SensorBase):
         # 'trim', 'trimblanket', 'trimvalid', 'type']
         self.sensor_attribute = kwargs.get('sa', 'temperature')
 
-        x = kwargs.get('use_cache', 'False')
-        if x.isdigit():
-            x = int(x)
-        if x != 'False' and bool(x):
-            use_cache = True
-        else:
-            use_cache = False
+        use_cache = cchrc.common.is_true(kwargs.get('use_cache', 'False'))
 
         if not ow.initialized:
             self.log.debug("Initializing OW connection")
             self._initialize_ow(connection_type)
-            Sensor.initialized_connection_type = connection_type
         elif (ow.initialized and
               (Sensor.initialized_connection_type != connection_type)):
             raise OwfsConnectionAlreadyInitialized("OneWire Connection already initialized to '%s' "

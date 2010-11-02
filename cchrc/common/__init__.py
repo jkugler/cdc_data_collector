@@ -76,3 +76,16 @@ def parse_sensor_info(info_string):
     minor_params = dict([x.split('=') for x in minor_params_string.split(';')])
 
     return major_param, minor_params
+
+def is_true(x):
+    """Test a config file value for truth"""
+    rv = False
+    if isinstance(x, basestring) and not x.isdigit():
+        if x.lower() != 'false' and bool(x):
+            rv = True
+    else:
+        x = int(x)
+        if bool(x):
+            rv = True
+
+    return rv

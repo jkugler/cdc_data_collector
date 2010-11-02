@@ -5,6 +5,9 @@ import tempfile
 import time
 import unittest2 as unittest
 
+import ow
+from cchrc.sensors.onewire import Sensor as OWSensor
+
 import cchrc
 from cchrc.common.exceptions import *
 
@@ -84,20 +87,63 @@ class TestNullSensor(unittest.TestCase):
         ns = cchrc.sensors.NullSensor('foo', 'bar', value='TESTVALUE')
         self.assertEqual(ns.get_reading(), 'TESTVALUE')
 
-class TestOwfsSensor(unittest.TestCase):
+class TestOwfsSensorUtils(unittest.TestCase):
     """Test the various OWFS sensor functions and utilities"""
 
     def test_id_conversion(self):
         """Ensure endianess conversion succeeds"""
         from cchrc.sensors import onewire as ow
         self.assertEqual('28.F76AA8020000',
-                         ow._get_owfs_id('BF000002A86AF728'))
+                         ow._normalize_owfs_id('BF000002A86AF728'))
 
-    def test_id_conversion_fail(self):
-        """Ensure _get_owfs_id blows up when given an already-converted id"""
+    def test_id_already_converted(self):
+        """Ensure _normalize_owfs_id returns the strings given if already converted"""
         from cchrc.sensors import onewire as ow
-        self.assertRaises(ow.OwfsIdAlreadyConverted,
-                          ow._get_owfs_id, '28.F76AA8020000')
+        self.assertEqual(ow._normalize_owfs_id('28.F76AA8020000'), '28.F76AA8020000')
+
+class TestOwfsSensor(unittest.TestCase):
+
+    def setUp(self):
+        # DS2409 - 1F
+        # DS18B20 - 28
+
+        # Have to muck with the class so it doesn't think it's
+        # already initialized
+        OWSensor.initialized_connection_type = None
+        OWSensor.sensors = {}
+
+    def test_get_all(self):
+        """Ensure _get_all gets all sensors """
+        ow.init('--tester=28,28,28,28')
+        OWSensor.initialized_connection_type = '--tester=28,28,28,28'
+        sensors = {}
+        expected_sensors = {'28.000028D70200': '/28.000028D70200',
+                            '28.000028D70300': '/28.000028D70300',
+                            '28.000028D70000': '/28.000028D70000',
+                            '28.000028D70100': '/28.000028D70100'}
+        OWSensor._get_all(ow.Sensor('/'), sensors)
+        self.assertEqual(sensors, expected_sensors)
+        # This causes other tests to fail, seems to be a bug in the ow
+        # module.
+        # ow.finish()
+
+    def test_initialize_ow(self):
+        """Ensure ow module is initialized properly"""
+        OWSensor._initialize_ow('--tester=28,28,28,28')
+        self.assertTrue(OWSensor.initialized_connection_type == '--tester=28,28,28,28')
+
+    def test_sensor_init(self):
+        """Ensure Sensor initializes properly"""
+        OWSensor._initialize_ow('--tester=28,28,28,28')
+        s = cchrc.sensors.onewire.Sensor('Test', '28.000028D70000',
+                                         connection='--tester=28,28,28,28')
+        self.assertEqual(s.sensor.id, '000028D70000')
+
+    def test_sensor_read(self):
+        OWSensor._initialize_ow('--tester=28,28,28,28')
+        s = cchrc.sensors.onewire.Sensor('Test', '28.000028D70200',
+                                         connection='--tester=28,28,28,28')
+        self.assertAlmostEquals(s.get_reading(), 4.2)
 
 class TestUtils(unittest.TestCase):
     """Test various utilities"""
@@ -138,6 +184,27 @@ class TestUtils(unittest.TestCase):
     def test_my_sum_all_bad(self):
         """Ensure my_sum returns a sane value for no values"""
         self.assertEqual(cchrc.sensors._my_sum([None, float('nan')]), 0)
+
+    def test_is_true_true_text(self):
+        """Ensure is_true handles true text properly"""
+        self.assertEqual(cchrc.common.is_true('True'), True)
+
+    def test_is_true_false_text(self):
+        """Ensure is_true handles false text properly"""
+        self.assertEqual(cchrc.common.is_true('False'), False)
+
+    def test_is_true_true_digit(self):
+        """Ensure is_true handles True digits properly"""
+        self.assertEqual(cchrc.common.is_true(1), True)
+
+    def test_is_true_false_digit(self):
+        """Ensure is_true handles false digits properly"""
+        self.assertEqual(cchrc.common.is_true(0), False)
+
+    def test_is_true_false_blank(self):
+        """Ensure is_true handles blank text properly"""
+        self.assertEqual(cchrc.common.is_true(''), False)
+
 
 class TestSensorCollection(unittest.TestCase):
     """Test operation of the SensorCollection class"""
