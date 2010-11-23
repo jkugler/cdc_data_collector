@@ -81,13 +81,14 @@ class Mother(object):
 
     def start(self):
         for c in self.start_callables:
-            self.log.debug("Starting '%s'", str(c))
+            self.log.debug("Starting '%s'", str(c.im_self))
             c()
 
     def stop(self, sig, stack_frame):
         for c in self.stop_callables:
-            self.log.debug("Stopping '%s'", str(c))
+            self.log.debug("Stopping '%s'", str(c.im_self))
             c()
+            c.im_self.join()
         self.ended = True
 
 def main():
@@ -174,3 +175,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    logging.shutdown()

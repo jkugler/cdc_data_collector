@@ -7,6 +7,7 @@ import unittest2 as unittest
 
 import ow
 from cchrc.sensors.onewire import Sensor as OWSensor
+from cchrc.sensors.null import Sensor as NullSensor
 
 import cchrc
 from cchrc.common.exceptions import *
@@ -18,7 +19,7 @@ class TestSensorBase(unittest.TestCase):
 
     def test_list_sensor_types(self):
         """Ensure sensors.list_all() is returning what it should"""
-        self.assertEqual(cchrc.sensors.list_all(), ['onewire'])
+        self.assertEqual(cchrc.sensors.list_all(), ['null','onewire'])
 
     def test_base_attributes(self):
         """Ensure SensorBase has all needed attributes"""
@@ -79,12 +80,12 @@ class TestNullSensor(unittest.TestCase):
 
     def test_default_reading(self):
         """Ensure NullSensor returns None"""
-        ns = cchrc.sensors.NullSensor('foo', 'bar')
+        ns = NullSensor('foo', 'bar')
         self.assertTrue(ns.get_reading() is None)
 
     def test_non_default_reading(self):
         """Ensure NullSensor returns the value given at initialization"""
-        ns = cchrc.sensors.NullSensor('foo', 'bar', value='TESTVALUE')
+        ns = NullSensor('foo', 'bar', value='TESTVALUE')
         self.assertEqual(ns.get_reading(), 'TESTVALUE')
 
 class TestOwfsSensorUtils(unittest.TestCase):
