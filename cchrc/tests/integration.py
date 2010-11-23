@@ -61,7 +61,7 @@ class TestIntegration(unittest.TestCase):
         self.sc.stop_averaging_sensors()
         self.assertRegexpMatches(get_file(self.temp_dir, 'TestFile'),
                                  ('Timestamp,T1_avg,T2_avg,T5_avg\r\n'
-                                  '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},6.5,13.0,32.5\r\n'
-                                  '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},18.5,37.0,92.5\r\n'
-                                  '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},30.5,61.0,152.5\r\n')
+                                  '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},7.5,15.0,37.5\r\n'
+                                  '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},19.5,39.0,97.5\r\n'
+                                  '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},31.5,63.0,157.5\r\n')
                                  )

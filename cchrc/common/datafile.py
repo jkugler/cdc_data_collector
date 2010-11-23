@@ -1,10 +1,14 @@
 from collections import defaultdict
 import csv
 import datetime
+import functools
 import logging
+import math
 import os
 import threading
 import time
+
+import futures
 
 import cchrc
 from cchrc.common.exceptions import (InvalidSensorMode, InvalidObject,
@@ -58,6 +62,7 @@ class DataFileRunner(threading.Thread):
         self.log = logging.getLogger('cchrc.common.datafile.DataFileRunner')
         self.__end_thread = False
         self.__data_files = defaultdict(list)
+        self.__dflr = defaultdict(int) # data files for interval k were run at v seconnds
         threading.Thread.__init__(self)
 
     def run(self):
@@ -66,12 +71,20 @@ class DataFileRunner(threading.Thread):
                 return # pragma: no cover
             cur_time = int(time.time())
             for rt in self.__data_files:
-                if cur_time % rt == 0:
-                    self.log.debug("Running '%s' files" % rt)
-                    # TODO: Make this use futures
-                    for df in self.__data_files[rt]:
-                        df.collect_data(cur_time)
-            time.sleep(1)
+                if ((cur_time % rt == 0) or
+                    ((cur_time - self.__dflr[rt]) > rt)):
+                    self.log.debug("Running '%s' files; "
+                                   "last run %s seconds ago",
+                                   rt, cur_time - self.__dflr[rt])
+                    self.__dflr[rt] = cur_time
+                    to_run = [functools.partial(df.collect_data, cur_time)
+                              for df in self.__data_files[rt]]
+                    with futures.ThreadPoolExecutor(len(self.__data_files[rt])) as executor:
+                        rv = executor.run_to_futures(calls=to_run,
+                                                     return_when=futures.RETURN_IMMEDIATELY)
+            # Sleep to the top of the next second
+            cur_time = time.time()
+            time.sleep(math.ceil(cur_time) - cur_time)
 
     def start_data_files(self):
         self.log.info('Starting')

@@ -3,8 +3,11 @@ from collections import defaultdict
 import config
 import datafile
 import logging
+import math
 import threading
 import time
+
+import futures
 
 from cchrc.common.exceptions import (InvalidObject, SensorAlreadyDefined,
                                      NotAnAveragingSensor, SensorNotDefined)
@@ -14,6 +17,7 @@ class SensorContainer(threading.Thread):
         self.__end_thread = False
         self.__sensors = {}
         self.__sbsi = defaultdict(list) # sensors by sampling interval
+        self.__silr = defaultdict(int) # sampling interval k was run at v seconds
         self.__start_time = None
         self.log = logging.getLogger('cchrc.common.SensorContainer')
         threading.Thread.__init__(self)
@@ -25,14 +29,18 @@ class SensorContainer(threading.Thread):
                 return # pragma: no cover
             elapsed_time = int(time.time()) - self.__start_time
             for st in self.__sbsi:
-                if elapsed_time % st == 0:
-                    self.log.debug("Running '%s second' averaging sensors" % st)
-                    # TODO: Make this use futures
-                    for sensor in self.__sbsi[st]:
-                        sensor.collect_reading()
-                    pass
-
-            time.sleep(1)
+                if ((elapsed_time % st == 0) or
+                    ((elapsed_time - self.__silr[st]) > st)):
+                    self.log.debug("Running '%s second' averaging sensors; "
+                                   "last run %s seconds ago",
+                                   st, elapsed_time - self.__silr[st])
+                    self.__silr[st] = elapsed_time
+                    with futures.ThreadPoolExecutor(len(self.__sbsi[st])) as executor:
+                        rv = executor.run_to_futures(calls=[sensor.collect_reading for sensor in self.__sbsi[st]],
+                                                     return_when=futures.RETURN_IMMEDIATELY)
+            # Sleep to the top of the next second
+            cur_time = time.time()
+            time.sleep(math.ceil(cur_time) - cur_time)
 
     def start_averaging_sensors(self):
         self.log.info('Starting')
