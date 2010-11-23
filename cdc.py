@@ -8,6 +8,8 @@ import signal
 import sys
 import time
 
+import configobj
+
 import cchrc
 
 def listify(v):
@@ -93,7 +95,7 @@ class Mother(object):
 
 def main():
     opts, args = get_opts()
-    cfg = cchrc.common.config.Config(args[0])
+    cfg = configobj.ConfigObj(args[0], file_error=True)
 
     log = configure_logging(cfg, opts)
 

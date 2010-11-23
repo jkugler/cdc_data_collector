@@ -13,7 +13,11 @@ class Sensor(cchrc.sensors.SensorBase):
 
     def __init__(self, name, sensor_id=None, **kwargs):
         cchrc.sensors.SensorBase.__init__(self, name, **kwargs)
-        self.value = kwargs.get('value', None)
+        value = kwargs.get('value', None)
+        try:
+            self.value = float(value)
+        except (TypeError, ValueError):
+            self.value = value
 
     def get_reading(self):
         return self.value

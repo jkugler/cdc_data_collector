@@ -166,7 +166,7 @@ class TestUtils(unittest.TestCase):
         opd = os.path.dirname
         self.assertEqual(cchrc.common.mod.mod_list(os.path.join(opd(opd(__file__)),
                                                                 'common')),
-                         ['config', 'datafile', 'exceptions', 'mod'])
+                         ['datafile', 'exceptions', 'mod'])
 
     def test_mod_nolist(self):
         """Ensure cchrc.common.mod.mod_list is working: no module dir"""

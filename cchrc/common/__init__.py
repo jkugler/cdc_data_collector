@@ -1,6 +1,5 @@
 import cchrc
 from collections import defaultdict
-import config
 import datafile
 import logging
 import math

@@ -72,7 +72,8 @@ class DataFileRunner(threading.Thread):
             cur_time = int(time.time())
             for rt in self.__data_files:
                 if ((cur_time % rt == 0) or
-                    ((cur_time - self.__dflr[rt]) > rt)):
+                    (self.__dflr[rt] != 0 and
+                        ((cur_time - self.__dflr[rt]) > rt))):
                     self.log.debug("Running '%s' files; "
                                    "last run %s seconds ago",
                                    rt, cur_time - self.__dflr[rt])
