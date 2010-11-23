@@ -19,7 +19,7 @@ class TestIntegration(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.sc = cchrc.common.SensorContainer()
+        self.sc = cchrc.sensors.SensorContainer()
         self.dfr = cchrc.common.datafile.DataFileRunner()
         self.sc.put(MyTestSensor('T1'), 'TestGroup')
         self.sc.put(MyTestSensor('T2', increment_value=2), 'TestGroup')

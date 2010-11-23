@@ -5,6 +5,8 @@ import tempfile
 import time
 import unittest2 as unittest
 
+import configobj
+
 import ow
 from cchrc.sensors.onewire import Sensor as OWSensor
 from cchrc.sensors.null import Sensor as NullSensor
@@ -206,13 +208,31 @@ class TestUtils(unittest.TestCase):
         """Ensure is_true handles blank text properly"""
         self.assertEqual(cchrc.common.is_true(''), False)
 
+    def test_sensor_collection_construction(self):
+        """Ensure sensor collection is constructed properly"""
+        cfg_file = os.path.join(os.path.dirname(__file__), 'files','test.ini')
+        cfg = configobj.ConfigObj(cfg_file, file_error=True)
+        self.assertEqual(str(cchrc.common.construct_sensor_collection(cfg)),
+                         ("<SensorContainer: ('GreenWire', 'T1', None), "
+                          "('GreenWire', 'T2', None), "
+                          "('GreenWire', 'T3', None)>"))
+
+    def test_data_file_runner_construction(self):
+        """Ensure data file runner is constructed properly"""
+        # TODO: make this more robust
+        cfg_file = os.path.join(os.path.dirname(__file__), 'files','test.ini')
+        cfg = configobj.ConfigObj(cfg_file, file_error=True)
+        sc = cchrc.common.construct_sensor_collection(cfg)
+        df = cchrc.common.construct_data_file_runner(cfg, False, sc)
+        self.assertEqual('T1',
+                         df._DataFileRunner__data_files[60][0].sensors[0].name)
 
 class TestSensorCollection(unittest.TestCase):
     """Test operation of the SensorCollection class"""
 
     def test_adding_sensors(self):
         """Ensure all added sensors are listed"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1')
         sc.put(MyTestSensor('X2', 'Y2'), 'Z1')
         self.assertEqual(str(sc), "<SensorContainer: ('Z1', 'X1', None), ('Z1', 'X2', None)>")
@@ -223,36 +243,36 @@ class TestSensorCollection(unittest.TestCase):
             pass
         obj = TO()
         obj.name = 'Some Value'
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         self.assertRaises(InvalidObject, sc.put, obj, 'X1')
 
     def test_adding_duplicate_sensor(self):
         """Ensure adding another sensor with a duplicate group/name raises and error"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1')
         self.assertRaises(SensorAlreadyDefined, sc.put, MyTestSensor('X1', 'Y1'), 'Z1')
 
     def test_getting_back_sensor(self):
         """Ensure sensor put in SC is retrieved"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         s = MyTestSensor('X1', 'Y1')
         sc.put(s, 'Z1')
         self.assertTrue(s is sc.get('Z1', 'X1'))
 
     def test_retrieving_invalid_sensor(self):
         """Ensure retrieving an invalid sensor raises an error"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         self.assertRaises(SensorNotDefined, sc.get, 'ZZ', 'YY')
 
     def test_storing_sampling_sensor_as_averaging(self):
         """Ensure trying to store a Sampling sensor as an averaging sensor raises an error"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         sc.put(MyTestSensor('X1', 'Y1'), 'Z1')
         self.assertRaises(NotAnAveragingSensor, sc.put, MyTestSensor('X1', 'Y1'), 'Z1', 900)
 
     def test_storing_averaging_sensor(self):
         """Ensure an averaging sensor is stored properly"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         smp_sensor = MyTestSensor('X1', 'Y1')
         avg_sensor = cchrc.sensors.AveragingSensor(smp_sensor)
         sc.put(avg_sensor, 'Z1', interval=900)
@@ -261,7 +281,7 @@ class TestSensorCollection(unittest.TestCase):
 
     def test_starting_stopping_sensor_collection(self):
         """Ensure SensorCollection thread starts and stops correctly"""
-        sc = cchrc.common.SensorContainer()
+        sc = cchrc.sensors.SensorContainer()
         sc.start_averaging_sensors()
         is_alive = sc.isAlive()
         sc.stop_averaging_sensors()
@@ -325,7 +345,7 @@ class TestDataFileRunner(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.sc = cchrc.common.SensorContainer()
+        self.sc = cchrc.sensors.SensorContainer()
         self.dfr = cchrc.common.datafile.DataFileRunner()
         self.sc.put(MyTestSensor('T1'), 'TestGroup')
         self.sc.put(MyTestSensor('T2', increment_value=5), 'TestGroup')
@@ -371,7 +391,7 @@ class TestDataFileOperations(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.sc = cchrc.common.SensorContainer()
+        self.sc = cchrc.sensors.SensorContainer()
         self.sc.put(MyTestSensor('T1'), 'TestGroup')
         self.sc.put(MyTestSensor('T2', increment_value=5), 'TestGroup')
         self.sc.put(MyTestSensor('T3', increment_value=10), 'TestGroup')

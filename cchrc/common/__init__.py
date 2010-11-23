@@ -1,81 +1,7 @@
-import cchrc
-from collections import defaultdict
-import datafile
 import logging
-import math
-import threading
-import time
 
-import futures
-
-from cchrc.common.exceptions import (InvalidObject, SensorAlreadyDefined,
-                                     NotAnAveragingSensor, SensorNotDefined)
-
-class SensorContainer(threading.Thread):
-    def __init__(self):
-        self.__end_thread = False
-        self.__sensors = {}
-        self.__sbsi = defaultdict(list) # sensors by sampling interval
-        self.__silr = defaultdict(int) # sampling interval k was run at v seconds
-        self.__start_time = None
-        self.log = logging.getLogger('cchrc.common.SensorContainer')
-        threading.Thread.__init__(self)
-
-    def run(self):
-        self.__start_time = int(time.time())
-        while True:
-            if self.__end_thread:
-                return # pragma: no cover
-            elapsed_time = int(time.time()) - self.__start_time
-            for st in self.__sbsi:
-                if ((elapsed_time % st == 0) or
-                    ((elapsed_time - self.__silr[st]) > st)):
-                    self.log.debug("Running '%s second' averaging sensors; "
-                                   "last run %s seconds ago",
-                                   st, elapsed_time - self.__silr[st])
-                    self.__silr[st] = elapsed_time
-                    with futures.ThreadPoolExecutor(len(self.__sbsi[st])) as executor:
-                        rv = executor.run_to_futures(calls=[sensor.collect_reading for sensor in self.__sbsi[st]],
-                                                     return_when=futures.RETURN_IMMEDIATELY)
-            # Sleep to the top of the next second
-            cur_time = time.time()
-            time.sleep(math.ceil(cur_time) - cur_time)
-
-    def start_averaging_sensors(self):
-        self.log.info('Starting')
-        self.start()
-
-    def put(self, sobject, group, interval=None):
-        name = sobject.name
-        if not isinstance(sobject, cchrc.sensors.SensorBase):
-            raise InvalidObject("'%s' is not a Sensor object" % str(sobject))
-        if self.contains(group, name, interval):
-            raise SensorAlreadyDefined("Sensor in group '%s' with name '%s' is already defined" % (group, name))
-        if interval and not isinstance(sobject, cchrc.sensors.AveragingSensor):
-            # Trying to store a Sampling sensor as an averaging sensor?
-            # Something is broken
-            raise NotAnAveragingSensor("Sensor %s.%s is not an averaging sensor"
-                               % (group, name))
-        self.log.info("Adding %s, %s with interval %s" % (group, name, interval))
-        self.__sensors[(group, name, interval)] = sobject
-        if interval:
-            self.__sbsi[interval/sobject.num_samples].append(sobject)
-
-    def get(self, group, name, interval=None):
-        try:
-            return self.__sensors[(group, name, interval)]
-        except KeyError:
-            raise SensorNotDefined("No sensor defined for group '%s', name '%s'" % (group, name))
-
-    def contains(self, group, name, interval=None):
-        return (group, name, interval) in self.__sensors
-
-    def __str__(self):
-        return '<SensorContainer: ' + ', '.join(sorted([str(x) for x in self.__sensors.keys()])) + '>'
-
-    def stop_averaging_sensors(self):
-        self.log.info('Stopping')
-        self.__end_thread = True
+import cchrc
+import datafile
 
 def parse_sensor_info(info_string):
     major_param, minor_params_string = info_string.split('/')
@@ -96,3 +22,71 @@ def is_true(x):
             rv = True
 
     return rv
+
+def listify(v):
+    """
+    If v is a string, returns a list with a single element of v
+    """
+    if isinstance(v, basestring):
+        v = [v]
+    return v
+
+def construct_sensor_collection(cfg):
+    sc = cchrc.sensors.SensorContainer()
+    log = logging.getLogger('cchrc.common.construct_sensor_collection')
+
+    for group in cfg['SensorGroups']:
+        if '/' in cfg['SensorGroups'][group]['SensorType']:
+            stype, group_params = cchrc.common.parse_sensor_info(cfg['SensorGroups'][group]['SensorType'])
+        else:
+            stype = cfg['SensorGroups'][group]['SensorType']
+            group_params = {}
+
+        log.debug("Configuring group '%s' with SensorType '%s' and params '%s'",
+                  group, stype, str(group_params))
+
+        sensors = cfg['SensorGroups'][group]['Sensors']
+        for sensor in sensors:
+            name = sensor
+            if '/' in sensors[sensor]:
+                sensor_id, sensor_params = cchrc.common.parse_sensor_info(sensors[sensor])
+            else:
+                sensor_id = sensors[sensor]
+                sensor_params = {}
+
+            all_params = {}
+            all_params.update(group_params)
+            all_params.update(sensor_params)
+            # TODO: This can throw a KeyError...catch it.
+            # TODO: Create an exception a sensor module can throw upon
+            # failure to initialize a sensor, and catch it here.
+            log.debug("Configuring sensor '%s' with id '%s' and params '%s'",
+                      name, sensor_id, str(all_params))
+            sobject = cchrc.sensors.get(stype).Sensor(name, sensor_id, **all_params)
+            if group + '.' + name in cfg['Names']:
+                display_name = cfg['Names'][group + '.' + name]
+                log.debug("Giving sensor '%s' display name '%s'",
+                          name, display_name)
+                sobject.display_name = display_name
+            log.debug("Putting sensor '%s' in SC", name)
+            sc.put(sobject, group)
+
+    return sc
+
+def construct_data_file_runner(cfg, test, sc):
+    DF = datafile.DataFile
+    log = logging.getLogger('cchrc.common.construct_data_file_runner')
+    dfr = datafile.DataFileRunner()
+
+    for data_file in cfg['Files']:
+        fcfg = cfg['Files'][data_file]
+        if test:
+            sampling_time = 60
+        else:
+            sampling_time = int(fcfg['SamplingTime'])
+        log.debug("Configuring datafile '%s' with sampling time %s",
+                  data_file, sampling_time)
+        dfr.put(DF(data_file, fcfg['FileName'], cfg['Main']['BaseDirectory'],
+                   fcfg['DefaultGroup'], sampling_time,
+                   fcfg['DefaultMode'], listify(fcfg['Sensors']), sc))
+    return dfr

@@ -12,14 +12,6 @@ import configobj
 
 import cchrc
 
-def listify(v):
-    """
-    If v is a string, returns a list with a single element of v
-    """
-    if isinstance(v, basestring):
-        v = [v]
-    return v
-
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
     parser = optparse.OptionParser(usage=usage)
@@ -99,57 +91,8 @@ def main():
 
     log = configure_logging(cfg, opts)
 
-    DF = cchrc.common.datafile.DataFile
-    sc = cchrc.common.SensorContainer()
-    dfr = cchrc.common.datafile.DataFileRunner()
-
-    for group in cfg['SensorGroups']:
-        if '/' in cfg['SensorGroups'][group]['SensorType']:
-            stype, group_params = cchrc.common.parse_sensor_info(cfg['SensorGroups'][group]['SensorType'])
-        else:
-            stype = cfg['SensorGroups'][group]['SensorType']
-            group_params = {}
-
-        log.debug("Configuring group '%s' with SensorType '%s' and params '%s'",
-                  group, stype, str(group_params))
-
-        sensors = cfg['SensorGroups'][group]['Sensors']
-        for sensor in sensors:
-            name = sensor
-            if '/' in sensors[sensor]:
-                sensor_id, sensor_params = cchrc.common.parse_sensor_info(sensors[sensor])
-            else:
-                sensor_id = sensors[sensor]
-                sensor_params = {}
-
-            all_params = {}
-            all_params.update(group_params)
-            all_params.update(sensor_params)
-            # TODO: This can throw a KeyError...catch it.
-            # TODO: Create an exception a sensor module can throw upon
-            # failure to initialize a sensor, and catch it here.
-            log.debug("Configuring sensor '%s' with id '%s' and params '%s'",
-                      name, sensor_id, str(all_params))
-            sobject = cchrc.sensors.get(stype).Sensor(name, sensor_id, **all_params)
-            if group + '.' + name in cfg['Names']:
-                display_name = cfg['Names'][group + '.' + name]
-                log.debug("Giving sensor '%s' display name '%s'",
-                          name, display_name)
-                sobject.display_name = display_name
-            log.debug("Putting sensor '%s' in SC", name)
-            sc.put(sobject, group)
-
-    for data_file in cfg['Files']:
-        fcfg = cfg['Files'][data_file]
-        if opts.test:
-            sampling_time = 60
-        else:
-            sampling_time = int(fcfg['SamplingTime'])
-        log.debug("Configuring datafile '%s' with sampling time %s",
-                  data_file, sampling_time)
-        dfr.put(DF(data_file, fcfg['FileName'], cfg['Main']['BaseDirectory'],
-                   fcfg['DefaultGroup'], sampling_time,
-                   fcfg['DefaultMode'], listify(fcfg['Sensors']), sc))
+    sc = cchrc.common.construct_sensor_collection(cfg)
+    dfr = cchrc.common.construct_data_file_runner(cfg, opts.test, sc)
 
     mom = Mother([sc.start_averaging_sensors, dfr.start_data_files],
                  [sc.stop_averaging_sensors, dfr.stop_data_files])
