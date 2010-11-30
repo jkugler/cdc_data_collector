@@ -208,6 +208,14 @@ class TestUtils(unittest.TestCase):
         """Ensure is_true handles blank text properly"""
         self.assertEqual(cchrc.common.is_true(''), False)
 
+    def test_listfy_with_string(self):
+        """Ensure listify converts to list"""
+        self.assertEqual(cchrc.common.listify('x'), ['x'])
+
+    def test_listify_with_list(self):
+        """Ensure listify returns a list given a list"""
+        self.assertEqual(cchrc.common.listify(['x']), ['x'])
+
     def test_sensor_collection_construction(self):
         """Ensure sensor collection is constructed properly"""
         cfg_file = os.path.join(os.path.dirname(__file__), 'files','test.ini')

@@ -9,15 +9,20 @@ import sys
 import time
 
 import configobj
+import daemon
 
 import cchrc
+
+class InvalidLoggingDestination(Exception):
+    pass
 
 def get_opts():
     usage = 'usage: %prog [options] path-to-ini'
     parser = optparse.OptionParser(usage=usage)
     a = parser.add_option
     a('-r', '--run-in-forground', action='store_true', dest='run_in_foreground',
-      help="Stay in the foreground and log to the console. Exit via Ctrl-C")
+      help=("Stay in the foreground and log to the console. "
+            "(Will still log to file as well). Exit via Ctrl-C"))
     a('-t', '--test', action='store_true', dest='test',
       help='Run CDC in test mode. (Sampling every 60 seconds)')
     a('-v', action='count', dest='verbose', help = 'Verbosity. '
@@ -42,11 +47,14 @@ def configure_logging(cfg, opts):
     log_format = cfg['Main'].get('LogFormat',
                                  "%(asctime)s %(name)s [%(levelname)s] %(message)s")
 
-    if not opts.run_in_foreground:
-        log_dir = cfg['Main'].get('LogDir', '/var/log/cchrc_data_collector')
-        if not os.path.exists(log_dir):
+
+    log_dir = cfg['Main'].get('LogDir', '/var/log/cchrc_data_collector')
+    if not os.path.exists(log_dir):
+        try:
             os.makedirs(log_dir)
-        log_args['filename'] = os.path.join(log_dir, 'cdc.log')
+        except OSError, ex:
+            raise InvalidLoggingDestination(str(ex))
+    log_args['filename'] = os.path.join(log_dir, 'cdc.log')
 
     if opts.verbose != 0:
         log_level = max([logging.WARNING - 10 * opts.verbosity, logging.DEBUG])
@@ -63,6 +71,12 @@ def configure_logging(cfg, opts):
     logging.basicConfig(**log_args)
 
     logger = logging.getLogger('cdc')
+
+    if opts.run_in_foreground:
+        console_logger = logging.StreamHandler()
+        console_logger.setLevel(log_level)
+        console_logger.setFormatter(logging.Formatter(log_format))
+        logging.getLogger('').addHandler(console_logger)
 
     return logger
 
@@ -85,11 +99,14 @@ class Mother(object):
             c.im_self.join()
         self.ended = True
 
-def main():
-    opts, args = get_opts()
-    cfg = configobj.ConfigObj(args[0], file_error=True)
+def go(cfg, opts, log):
 
-    log = configure_logging(cfg, opts)
+    if os.path.exists('/var/run/cdc.pid'):
+        log.error('Will not start: existing process\n '
+                  'If a previous CDC instance crashed, delete /var/run/cdc.pid before running.')
+        return
+
+    open('/var/run/cdc.pid', mode='w').write(str(os.getpid()))
 
     sc = cchrc.common.construct_sensor_collection(cfg)
     dfr = cchrc.common.construct_data_file_runner(cfg, opts.test, sc)
@@ -98,11 +115,6 @@ def main():
                  [sc.stop_averaging_sensors, dfr.stop_data_files])
 
     log.debug("Starting Mother")
-
-    # TODO: Handle case for logging/threading/closed files, etc.
-    # File "/usr/lib/python2.6/logging/__init__.py", line 789, in emit
-    # stream.write(fs % msg)
-    # ValueError: I/O operation on closed file
 
     mom.start()
 
@@ -116,7 +128,26 @@ def main():
         signal.pause()
         if mom.ended:
             log.debug("Mother ended. Shutting down")
+            os.unlink('/var/run/cdc.pid')
             return
+
+def main():
+    opts, args = get_opts()
+    cfg = configobj.ConfigObj(args[0], file_error=True)
+
+    try:
+        log = configure_logging(cfg, opts)
+    except InvalidLoggingDestination, ex:
+        print "Could not initialize logging:", str(ex)
+        print "Exiting"
+        sys.exit(1)
+
+    if opts.run_in_foreground:
+        go(cfg, opts, log)
+    else:
+        # Keep the log file open when converting to a daemon
+        with daemon.DaemonContext(files_preserve=[log.root.handlers[0].stream]):
+            go(cfg, opts, log)
 
 if __name__ == '__main__':
     main()
