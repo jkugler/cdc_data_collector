@@ -2,3 +2,6 @@
 *.*~
 *.bak
 .coverage
+CDCDataCollector.egg-info/
+build/
+dist/
