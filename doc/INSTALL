@@ -1,0 +1,13 @@
+To use the 'ow' sensors you must download, compile, and install the OWFS
+project here: http://owfs.org/index.php?page=download Be sure to enable
+the python module.
+
+Your distribution may also have a package for the owfs suite, but at
+the time of this writing, there were not many (if any) distributions
+that did.
+
+Run
+
+python setup.py install
+
+Installation requires setuptools.
