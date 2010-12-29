@@ -9,7 +9,7 @@ For now the home page lives at: https://github.com/jkugler/cdc_data_collector
 
 Dependencies
 ============
-CDC uses the following python moudules:
+CDC uses the following python modules:
 
 configobj
 ---------
@@ -50,7 +50,7 @@ Due to the current design, CDC must be run as root. This is due to a
 couple reasons.
 
 - On some machines, the OneWire USB device an only be accessed by root.
-- CDC writes its PID file to /var/run/, which requires root priveleges.
+- CDC writes its PID file to /var/run/, which requires root privileges.
 
 Starting
 --------
@@ -175,7 +175,7 @@ name you will use to define which sensors you want in which data files.
 
 The SENSOR_ID is the ID used by the sensor type to find the sensor.
 
-The options are passesd to the sensor class upon initialization.
+The options are passed to the sensor class upon initialization.
 
 This is an example sensor group section:
 
