@@ -18,7 +18,7 @@ but not much documentation.  The interface (especially of
 cchrc.Sensor.SensorBase can be considered relatively stable).
 
 This project is in use in a real-world situation, so has all known bugs
-worked out.  But if you find out, please let me know!
+worked out.  But if you find one, please let me know!
 
 REPOSITORY
 ==========

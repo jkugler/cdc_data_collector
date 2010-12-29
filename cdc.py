@@ -48,7 +48,7 @@ def configure_logging(cfg, opts):
                                  "%(asctime)s %(name)s [%(levelname)s] %(message)s")
 
 
-    log_dir = cfg['Main'].get('LogDir', '/var/log/cchrc_data_collector')
+    log_dir = cfg['Main'].get('LogDir', '/var/log/cdc_data_collector')
     if not os.path.exists(log_dir):
         try:
             os.makedirs(log_dir)
