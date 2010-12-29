@@ -64,6 +64,37 @@ The easiest way to stop CDC is to run this command as root:
 
 ``kill `cat /var/run/cdc.pid```
 
+Available Sensor Types
+======================
+Currently the only two sensor type are:
+
+ - onewire
+ - null
+
+onewire
+-------
+This sensor is used for reading values off of a onewire bus.
+
+Valid Parameters
+++++++++++++++++
+connection
+  The connection string which defines the source of the onewire readings.  This is the same string you might
+  pass to one of the onewire utilities as a command-line option, such as "u", "server:8100", or some such.
+sa
+  The attribute of the sensor to return upon a call to ``get_reading()``. This defaults to "temperature."
+use_cache
+  True or False. Use values from the onewire cache. See the onewire documentation for more on the cache. Defaults
+  to False.
+
+null
+----
+The null sensor is used for testing.
+
+Valid Parameters
+++++++++++++++++
+value
+  Defines the value this sensor will return when ``get_reading()`` is called.
+
 Configuration File
 ==================
 
@@ -233,3 +264,11 @@ An example of a data file using the BlackWire sensor group above:
 |     SamplingTime = 900
 |     DefaultMode = SAMPLE
 |     Sensors = T1,T2,T3,T1/AVERAGE,T2/AVERAGE,T3/AVERAGE
+
+Development
+===========
+
+There is not much developer documentation at this point.
+
+For an example of a barebones sensor, see ``cchrc/sensors/null.py``. For an
+example of a more complicated sensor, see ``cchrc/sensors/onewire.py``.
