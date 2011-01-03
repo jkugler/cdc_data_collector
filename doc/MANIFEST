@@ -1,0 +1,36 @@
+.
+|-- README.rst - A "Start here" type of guide
+|-- cchrc -  Main module
+|   |-- __init__.py - Module placeholder
+|   |-- common - Some common code
+|   |   |-- __init__.py - Some utility functions
+|   |   |-- datafile.py - Code for data files
+|   |   |-- exceptions.py - CDC exceptions
+|   |   `-- mod.py - Helper functions for dealing with modules
+|   |-- sensors - Code for Sensors
+|   |   |-- __init__.py - Base sensor and averaging sensor
+|   |   |-- null.py - The Null sensor (always returns the same value)
+|   |   `-- onewire.py - The sensor for the OneWire bus
+|   `-- tests - CDC Tests
+|       |-- __init__.py - Module placeholder
+|       |-- common.py - Common code for tests
+|       |-- files - Files used during testing
+|       |   |-- sample_ow.ini
+|       |   `-- test.ini
+|       |-- integration.py - "Full stack" tests
+|       `-- unit.py - Test which exercise discrete parts of the framework
+|-- cdc.py - Main executable
+|-- cov.sh - Used for checking test coverage
+|-- design_ideas.txt - Some design notes
+|-- doc
+|   |-- CHANGES - Change log
+|   |-- COPYING - License
+|   |-- CREDITS - Credits for CDC
+|   |-- HANDBOOK.rst - User/developer handbook
+|   |-- INSTALL - Directions for install
+|   `-- MANIFEST - This file
+|-- notes.txt - Some general notes
+|-- run_tests.py - Run the tests
+`-- setup.py - Python install/egg creation file
+
+6 directories, 31 files
