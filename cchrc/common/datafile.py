@@ -81,8 +81,8 @@ class DataFileRunner(threading.Thread):
                     to_run = [functools.partial(df.collect_data, cur_time)
                               for df in self.__data_files[rt]]
                     with futures.ThreadPoolExecutor(len(self.__data_files[rt])) as executor:
-                        rv = executor.run_to_futures(calls=to_run,
-                                                     return_when=futures.RETURN_IMMEDIATELY)
+                        for t in to_run:
+                            fs = executor.submit(t)
             # Sleep to the top of the next second
             cur_time = time.time()
             time.sleep(math.ceil(cur_time) - cur_time)

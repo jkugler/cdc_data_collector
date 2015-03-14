@@ -106,6 +106,7 @@ def go(cfg, opts, log):
                   'If a previous CDC instance crashed, delete /var/run/cdc.pid before running.')
         return
 
+    # TODO: catch error if it can't open
     open('/var/run/cdc.pid', mode='w').write(str(os.getpid()))
 
     sc = cchrc.common.construct_sensor_collection(cfg)

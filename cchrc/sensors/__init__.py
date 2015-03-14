@@ -49,8 +49,8 @@ class SensorContainer(threading.Thread):
                                    st, elapsed_time - self.__silr[st])
                     self.__silr[st] = elapsed_time
                     with futures.ThreadPoolExecutor(len(self.__sbsi[st])) as executor:
-                        rv = executor.run_to_futures(calls=[sensor.collect_reading for sensor in self.__sbsi[st]],
-                                                     return_when=futures.RETURN_IMMEDIATELY)
+                        for sensor in self.__sbsi[st]:
+			    executor.submit(sensor.collect_reading)
             # Sleep to the top of the next second
             cur_time = time.time()
             time.sleep(math.ceil(cur_time) - cur_time)
