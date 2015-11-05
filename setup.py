@@ -11,7 +11,7 @@ setup(
     # Project uses reStructuredText, so ensure that the docutils get
     # installed or upgraded on the target machine
     install_requires = ['configobj', 'daemon', 'futures'],
-    tests_require = ['unittest2'],
+    tests_require = ['unittest'],
 
     # metadata for upload to PyPI
     author = "Joshua Kugler",

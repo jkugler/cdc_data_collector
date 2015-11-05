@@ -3,7 +3,7 @@ import os
 import shutil
 import tempfile
 import time
-import unittest2 as unittest
+import unittest
 
 import cchrc
 from cchrc.common.exceptions import *

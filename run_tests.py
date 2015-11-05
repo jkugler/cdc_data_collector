@@ -3,7 +3,7 @@
 import logging
 import os
 import sys
-import unittest2 as unittest
+import unittest
 
 # Set up the test environment
 opd = os.path.dirname
